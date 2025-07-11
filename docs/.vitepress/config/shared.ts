@@ -4,13 +4,14 @@ import {
   groupIconVitePlugin,
   localIconLoader
 } from 'vitepress-plugin-group-icons'
+import { search as zhSearch } from './zh'
 
 export const shared = defineConfig({
-  title: 'VitePress',
+  title: 'DASBook',
 
-  rewrites: {
-    'en/:rest*': ':rest*'
-  },
+  // rewrites: {
+  //   'en/:rest*': ':rest*'
+  // },
 
   lastUpdated: true,
   cleanUrls: true,
@@ -67,55 +68,52 @@ export const shared = defineConfig({
 
   /* prettier-ignore */
   head: [
-    // ['link', { rel: 'icon', type: 'image/svg+xml', href: '/vitepress-logo-mini.svg' }],
-    // ['link', { rel: 'icon', type: 'image/png', href: '/vitepress-logo-mini.png' }],
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/ETH100-icon.svg' }],
+    ['link', { rel: 'icon', type: 'image/png', href: '/ETH100-icon-mini.png' }],
     ['meta', { name: 'theme-color', content: '#5f67ee' }],
     ['meta', { property: 'og:type', content: 'website' }],
     ['meta', { property: 'og:locale', content: 'en' }],
-    ['meta', { property: 'og:title', content: 'VitePress | Vite & Vue Powered Static Site Generator' }],
-    ['meta', { property: 'og:site_name', content: 'VitePress' }],
-    ['meta', { property: 'og:image', content: 'https://vitepress.dev/vitepress-og.jpg' }],
-    ['meta', { property: 'og:url', content: 'https://vitepress.dev/' }],
+    ['meta', { property: 'og:title', content: 'DASBook | Everything about DAS' }],
+    ['meta', { property: 'og:site_name', content: 'DASBook' }],
+    ['meta', { property: 'og:url', content: 'https://dasbook.eth100.wtf/' }],
     ['script', { src: 'https://cdn.usefathom.com/script.js', 'data-site': 'AZBRSFGG', 'data-spa': 'auto', defer: '' }]
   ],
 
   themeConfig: {
-    // logo: { src: '/vitepress-logo-mini.svg', width: 24, height: 24 },
+    logo: {
+      src: '/ETH100-icon.svg',
+      height: 60,
+      alt: 'ETH100 Logo'
+    },
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/Angry-ETH/dasbook' }
+      { icon: 'github', link: 'https://github.com/Angry-ETH/dasbook' },
+      { icon: 'twitter', link: 'https://x.com/angryeth_xyz' },
     ],
 
-    // search: {
-    //   provider: 'algolia',
-    //   options: {
-    //     appId: '8J64VVRP8K',
-    //     apiKey: '52f578a92b88ad6abde815aae2b0ad7c',
-    //     indexName: 'vitepress',
-    //     locales: {
-    //       ...zhSearch,
-    //       ...ptSearch,
-    //       ...ruSearch,
-    //       ...esSearch,
-    //       ...koSearch,
-    //       ...faSearch
-    //     }
-    //   }
-    // },
-
-    carbonAds: { code: 'CEBDT27Y', placement: 'vuejsorg' }
+    search: {
+      provider: 'algolia',
+      options: {
+        appId: 'XX5EAVN76F',
+        apiKey: '97fc8ea6aa1ef089d5e9bbb7c1dd3068',
+        indexName: 'DASBook',
+        locales: {
+          ...zhSearch,
+        }
+      }
+    },
   },
   vite: {
     plugins: [
-      // groupIconVitePlugin({
-      //   customIcon: {
-      //     vitepress: localIconLoader(
-      //       import.meta.url,
-      //       '../../public/vitepress-logo-mini.svg'
-      //     ),
-      //     firebase: 'logos:firebase'
-      //   }
-      // })
+      groupIconVitePlugin({
+        customIcon: {
+          vitepress: localIconLoader(
+            import.meta.url,
+            '../../public/ETH100-icon.svg'
+          ),
+          firebase: 'logos:firebase'
+        }
+      })
     ]
   }
 })

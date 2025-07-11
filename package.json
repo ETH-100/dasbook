@@ -1,16 +1,38 @@
 {
-  "devDependencies": {
-    "@types/node": "^24.0.10",
-    "vitepress": "^1.6.3"
-  },
+  "name": "dasbook",
+  "version": "0.1.0",
+  "description": "Everything about Data Availability Sampling – simple, comprehensive, and timely.",
   "type": "module",
   "scripts": {
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
-    "docs:preview": "vitepress preview docs"
+    "docs:preview": "vitepress preview docs --port 8080",
+    "format": "prettier --write ."
   },
   "dependencies": {
     "markdown-it-mathjax3": "^4.3.2",
     "vitepress-plugin-group-icons": "^1.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "vitepress": "^1.6.3",
+    "prettier": "^3.2.5",
+    "typescript": "^5.4.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Angry-ETH/dasbook.git"
+  },
+  "keywords": [
+    "data-availability",
+    "DAS",
+    "Ethereum",
+    "blockchain",
+    "vitepress",
+    "documentation"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

@@ -4,23 +4,25 @@ layout: home
 
 hero:
   name: "DASBook"
-  text: "关于 DAS 的一切"
-  tagline: 简单 全面 及时
+  text: "Everything about DAS"
+  tagline: Simple. Comprehensive. Timely.
   actions:
     - theme: brand
-      text: Markdown Examples
-      link: /markdown-examples
+      text: guide
+      link: /guide/concept
     - theme: alt
-      text: API Examples
-      link: /api-examples
+      text: advanced
+      link: /advanced/network/das-network-design
+    - theme: alt
+      text: research
+      link: /research/security/security-assumptions
 
 features:
-  - title: 入门
-    details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
-    link: /markdown-examples
-  - title: Feature B
-    details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
-  - title: Feature C
-    details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
+  - title: Simple and Understandable
+    details: Don't let cryptic jargon stop you — we start from scratch and guide you to the cutting edge.
+  - title: Comprehensive and Timely
+    details: We stay on top of the latest developments, covering everything from fundamentals to frontier research.
+  - title: Future-Oriented
+    details: With an eye on what's ahead, we explore the long-term path and innovations in data availability.
 ---
 

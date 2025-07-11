@@ -8,19 +8,20 @@ hero:
   tagline: 简单 全面 及时
   actions:
     - theme: brand
-      text: Markdown Examples
-      link: /markdown-examples
+      text: 入门
+      link: /zh/guide/concept
     - theme: alt
-      text: API Examples
-      link: /api-examples
+      text: 进阶
+      link: /zh/advanced/network/das-network-design
+    - theme: alt
+      text: 研究
+      link: /zh/research/security/security-assumptions
 
 features:
-  - title: 入门
-    details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
-    link: /markdown-examples
-  - title: Feature B
-    details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
-  - title: Feature C
-    details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
+  - title: 简单易懂
+    details: 别让晦涩术语挡住你的脚步，我们从零开始，一路走到最前沿。
+  - title: 全面及时
+    details: 紧跟技术脉搏，融合原理、进展与研究，内容全面而实时。
+  - title: 面向未来
+    details: 聚焦未来挑战，探索数据可用性的长期路径与创新方向。
 ---
-

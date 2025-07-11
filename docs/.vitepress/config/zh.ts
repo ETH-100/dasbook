@@ -13,7 +13,8 @@ export const zh = defineConfig({
 
     sidebar: {
       '/zh/guide/': { base: '/zh/guide/', items: sidebarGuide() },
-      '/zh/reference/': { base: '/zh/reference/', items: sidebarReference() }
+      '/zh/advanced/': { base: '/zh/advanced/', items: sidebarAdvanced() },
+      '/zh/research/': { base: '/zh/research/', items: sidebarResearch() }
     },
 
     editLink: {
@@ -57,13 +58,18 @@ function nav(): DefaultTheme.NavItem[] {
   return [
     {
       text: '指南',
-      link: '/zh/guide/what-is-vitepress',
+      link: '/zh/guide/concept',
       activeMatch: '/zh/guide/'
     },
     {
-      text: '参考',
-      link: '/zh/reference/site-config',
-      activeMatch: '/zh/reference/'
+      text: '进阶',
+      link: '/zh/advanced/network/das-network-design',
+      activeMatch: '/zh/advanced/'
+    },
+    {
+      text: '研究',
+      link: '/zh/research/security/security-assumptions',
+      activeMatch: '/zh/research/'
     },
   ]
 }
@@ -71,75 +77,82 @@ function nav(): DefaultTheme.NavItem[] {
 function sidebarGuide(): DefaultTheme.SidebarItem[] {
   return [
     {
-      text: '简介',
+      text: '指南',
       collapsed: false,
       items: [
-        { text: '什么是 VitePress？', link: 'what-is-vitepress' },
-        { text: '快速开始', link: 'getting-started' },
-        { text: '路由', link: 'routing' },
-        { text: '部署', link: 'deploy' }
+        { text: '概念', link: '/concept' },
+        { text: '编码', link: '/encoding' },
+        { text: '应用', link: '/application' }
       ]
-    },
-    {
-      text: '写作',
-      collapsed: false,
-      items: [
-        { text: 'Markdown 扩展', link: 'markdown' },
-        { text: '资源处理', link: 'asset-handling' },
-        { text: 'frontmatter', link: 'frontmatter' },
-        { text: '在 Markdown 使用 Vue', link: 'using-vue' },
-        { text: '国际化', link: 'i18n' }
-      ]
-    },
-    {
-      text: '自定义',
-      collapsed: false,
-      items: [
-        { text: '自定义主题', link: 'custom-theme' },
-        { text: '扩展默认主题', link: 'extending-default-theme' },
-        { text: '构建时数据加载', link: 'data-loading' },
-        { text: 'SSR 兼容性', link: 'ssr-compat' },
-        { text: '连接 CMS', link: 'cms' }
-      ]
-    },
-    {
-      text: '实验性功能',
-      collapsed: false,
-      items: [
-        { text: 'MPA 模式', link: 'mpa-mode' },
-        { text: 'sitemap 生成', link: 'sitemap-generation' }
-      ]
-    },
-    { text: '配置和 API 参考', base: '/zh/reference/', link: 'site-config' }
+    }
   ]
 }
 
-function sidebarReference(): DefaultTheme.SidebarItem[] {
+function sidebarAdvanced(): DefaultTheme.SidebarItem[] {
   return [
     {
-      text: '参考',
+      text: '进阶',
+      collapsed: false,
       items: [
-        { text: '站点配置', link: 'site-config' },
-        { text: 'frontmatter 配置', link: 'frontmatter-config' },
-        { text: '运行时 API', link: 'runtime-api' },
-        { text: 'CLI', link: 'cli' },
         {
-          text: '默认主题',
-          base: '/zh/reference/default-theme-',
+          text: '网络',
           items: [
-            { text: '概览', link: 'config' },
-            { text: '导航栏', link: 'nav' },
-            { text: '侧边栏', link: 'sidebar' },
-            { text: '主页', link: 'home-page' },
-            { text: '页脚', link: 'footer' },
-            { text: '布局', link: 'layout' },
-            { text: '徽章', link: 'badge' },
-            { text: '团队页', link: 'team-page' },
-            { text: '上下页链接', link: 'prev-next-links' },
-            { text: '编辑链接', link: 'edit-link' },
-            { text: '最后更新时间戳', link: 'last-updated' },
-            { text: '搜索', link: 'search' },
-            { text: 'Carbon Ads', link: 'carbon-ads' }
+            { text: 'DAS 网络设计', link: '/network/das-network-design' },
+            { text: 'DHT', link: '/network/dht' },
+            { text: 'Gossip', link: '/network/gossip' }
+          ]
+        },
+        {
+          text: '编码',
+          items: [
+            { text: 'Reed-Solomon Code', link: '/encoding/reed-solomon-code' },
+            { text: '数据矩阵', link: '/encoding/data-matrix' },
+            { text: '分布式生成', link: '/encoding/distributed-generation' }
+          ]
+        },
+        {
+          text: '密码学',
+          items: [
+            { text: '椭圆曲线加密', link: '/cryptography/elliptic-curve-cryptography' },
+            { text: '椭圆曲线应用', link: '/cryptography/elliptic-curve-applications' },
+            { text: '椭圆曲线配对', link: '/cryptography/elliptic-curve-pairing' },
+            { text: 'Weil 配对', link: '/cryptography/weil-pairing' },
+            { text: 'Tate 配对', link: '/cryptography/tate-pairing' },
+            { text: 'Miller 算法', link: '/cryptography/miller-algorithm' },
+            { text: '多项式承诺', link: '/cryptography/polynomial-commitment' }
+          ]
+        },
+        { text: 'PeerDAS', link: '/peerdas' }
+      ]
+    }
+  ]
+}
+
+function sidebarResearch(): DefaultTheme.SidebarItem[] {
+  return [
+    {
+      text: '研究',
+      collapsed: false,
+      items: [
+        {
+          text: '安全性',
+          items: [
+            { text: '安全假设', link: '/security/security-assumptions' },
+            { text: '威胁模型', link: '/security/threat-model' }
+          ]
+        },
+        {
+          text: '方案设计',
+          items: [
+            { text: '网络拓扑', link: '/design/network-topology' },
+            { text: '数据分发', link: '/design/data-dissemination' },
+            { text: '采样策略', link: '/design/sampling-strategies' }
+          ]
+        },
+        {
+          text: '密码学和编码',
+          items: [
+            { text: 'RLNC', link: '/cryptography-and-coding/rlnc' }
           ]
         }
       ]
