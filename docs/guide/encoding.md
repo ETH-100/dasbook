@@ -1,72 +1,111 @@
-## 数据可用性编码
+# Encoding
 
-数据经过编码后，只要通过其中任意 50% 数据，即可恢复原始数据。这听起来很高级，实际上原理非常简单。接下来我们不得不使用一些公式，请不用走开，真的非常简单。
+## Data Availability Encoding
 
-我们有一小段原始数据，我们将其分割为两部分，并视为数字，分别用 $y_1$ 和 $y_2$ 表示，并视为在一条直线上当 $x_1 = 1$ 和 $x_2 = 2$ 时的 $y$ 值，我们通过这两个点就可以画出一条直线：
+The core goal of DAS is to confirm whether data is fully available on the network, and encoding techniques are the key tool to achieve this.
 
-我们用如下形式表示这条唯一的直线：
+After encoding, **any 50% of the encoded data** is sufficient to **reconstruct the original data**. While this may sound sophisticated, the principle is actually quite simple. We’ll introduce a few formulas—but don’t worry, they’re easy to follow.
 
-$$
-y=ax+b
-$$
+### Starting with a Line
 
-对原始数据进行编码，就是再取 $x$ 分别为 $3,4$ 时 $y$ 的值，从而得到：
+Suppose we have a small piece of original data split into two parts, denoted as $y_1$ and $y_2$. You can think of them as two points on a straight line, where $y_1$ corresponds to $x_1 = 1$ and $y_2$ corresponds to $x_2 = 2$. Based on the principle that *two points determine a line*, we can uniquely determine the line:
 
 $$
-[y_1,y_2,y_3,y_4]
+y = ax + b
 $$
 
-两点确定一条直线，我们只需要知道这条直线上的两个点，就可以画出这条直线。换句话说，我们只需要其中两个 $y$ 的值，就可以计算出 $a$ 和 $b$ 的值。无论 $y$ 的值丢失了哪两个，我们都能恢复出原始数据。
-
-在实际应用中，原理有很大出入。另外，现实中的数据远比两个数字复杂得多，它可能是上千个交易、上万条状态变更，我们无法仅仅用一条直线去表示它们。但没关系，我们早就有了通用方法：**多项式插值和纠删码（Erasure Coding）**。在这类编码方式中，最常被使用的是 **Reed-Solomon 编码**（RS 编码），它广泛用于光盘、硬盘、卫星通信等需要高容错的数据场景，例如当光盘有轻微的划痕时，我们还能读取出数据。只要你手上有足够多的“点”，就可以准确还原出原始数据。
-
-## 编码证明
-
-现在我们回顾下采样的流程，采样者试图从点对点网络中获得某个坐标的数据，多次采样后以获得数据是否可用的信心保证。现在还有一个问题： 我们如何确保采样获得的数据块就是发布者的原始数据块，而不是经过篡改的？
-
-### 数据指纹
-
-我们通过叠加数据指纹的方式来做到这一点，每个数据块都生成一个独特的指纹，之后我们再将这些指纹当做数据，两两合并生成新的指纹，如此一来指纹数量少了一半，如此多次最终我们将得到一个单独的指纹。这个最终的指纹被称为默克尔根，整个指纹叠加的方式就像一颗树，被称为默克尔树。
-
-[图示： 默克尔树]
-
-我们只需要公布从树的叶子到根经过的所有叶子，就可以验证该数据是否被经过了篡改。数据发布者只需要公布默克尔根，并为每个数据块生成一个证明，就可以保证数据在网络中原样传递。这个默克尔根会被保存在链上，作为这个批交易的数据指纹。在乐观 Rollup 中，发起挑战时，只需要提交数据块，以及这个数据块相对于默克尔根的证明。
-
-### 欺诈证明
-
-但数据指纹并不能保证所有数据都是正确的，回顾一下我们的正确数据：
+To encode the original data, we generate the $y$ values for $x = 3$ and $x = 4$, resulting in:
 
 $$
-[y_1,y_2,y_3,y_4]
+[y_1, y_2, y_3, y_4]
 $$
 
-我们使用它来生成一个默克尔根 $root$ 。假设其中的 $y_2$ 是一笔恶意交易，Alice 的余额为 20ETH ，但成功向 Bob 转账了 100ETH 。在乐观 Rollup 中，我们只需要向链上提交原始数据 $y_2$ 发起挑战，便得使这笔交易作废。
+![image.png](/en/line.png)
 
-现在 Alice 作为数据发布者，用一个错误的数据 $z$ 代替原始数据，从而生成新的默克尔根 $root'$ 并公开。
+This gives us a **redundant dataset**, where any two of the four $y$ values are sufficient to reconstruct the entire line—and thus, recover the original $y_1$ and $y_2$. In other words, even if half the data is lost, the original information can still be recovered.
+
+### Polynomial Interpolation and Reed-Solomon Encoding
+
+Of course, real-world data is far more complex than just two numbers—it could include entire batches of transactions, state changes, smart contract executions, and more. A simple line won’t suffice, but that’s okay—we can use **polynomial interpolation** instead.
+
+In encoding theory, we use a technique called **Reed-Solomon (RS) encoding**, which transforms original data into points on a high-degree polynomial and then performs redundancy expansion. This method is widely used in CDs, hard drives, and satellite communications—any system that requires high fault tolerance. For example, even if a CD is scratched, RS encoding allows us to recover the data. As long as you have a sufficient number of “points,” the original data can be reconstructed.
+
+In blockchain data availability, RS encoding allows us to recover an entire block’s content as long as we obtain **any half of the data chunks**, providing a solid mathematical foundation for DAS.
+
+## Correctness of Encoding
+
+Let’s revisit the sampling process: a validator attempts to obtain data at a certain coordinate from the network. After repeated successful samples, they gain increasing confidence in the availability of the data. But here’s a critical question: **How do we ensure that the sampled data chunks are actually the original data, and not tampered with?**
+
+### Data Fingerprints
+
+To address this, we generate a unique fingerprint for each data chunk using a cryptographic hash. Then we pair these hashes, hash them again, and repeat this process until we get a single hash representing the entire dataset—this is the famous **Merkle Root**, and the tree-like structure is known as a **Merkle Tree**.
+
+By publishing the path from a leaf to the root, anyone can verify whether a data chunk has been tampered with. Thanks to the Merkle Tree structure, the data publisher only needs to disclose the Merkle root, and other nodes can use a minimal proof (Merkle proof) to verify whether any given chunk belongs to the original dataset. This technique is widely used in Bitcoin, Ethereum, and other blockchains, forming a standard for on-chain data verification.
+
+### Faulty Encoding
+
+Merkle Trees ensure that data hasn’t been altered *after* publication—but they can’t verify whether the **original data itself was correct**. Let’s look at the original correct dataset:
 
 $$
-[y_1,z,y_3,y_4]
+[y_1, y_2, y_3, y_4]
 $$
 
-之后 Alice 隐藏数据 $z$ 的值，只发布其他所有数据。此时超过 50% 的数据被公布，可以通过采样，但没人知道 $z$ 的值是什么。这听起来似乎没什么问题，因为我们可以通过其他的值恢复出原始的正确 $y_2$ ，但无法生成  $y_2$ 相对于 $root'$ 的证明，我们无法发起挑战。当然 $z$ 也是错误的，也可以通过它来发起挑战，但挑战者无法知道 $z$ 的值，同样无法发起挑战。最终，这笔错误的交易将无法被识别。
+This generates a Merkle root $root$.
 
-解决方案是使用欺诈证明。
+![image.png](/en/merkle-tree.png)
 
-这依赖于一个强大的全节点，能够获取大部分数据并恢复，重新编码后即可发现 $root'$ 是错误的。全节点将生成一个欺诈证明，包含了一半的数据（用于恢复完整数据）、数据块的证明和错误之处。网络中的采样节点在采样成功后，并不急于确认数据是可用的，而是留出一定的时间等待欺诈证明。如果收到欺诈证明并通过验证，整个数据将被视为不可用，随后节点向其他节点继续传播欺诈证明。如果在等待期完成后依然没有收到欺诈证明，即可确定数据是可用的。
+Now suppose $y_2$ contains a malicious transaction—for instance, Alice has only 20 ETH but attempts to transfer 100 ETH to Bob. In an Optimistic Rollup, we could submit $y_2$ and its Merkle proof to initiate a challenge and invalidate the transaction.
 
-当然这是一个十分简化的示例，在现实中，数据的错误编码方式更多，攻击方式也更多。
+But imagine Alice instead **replaces $y_2$ with a fake value $z$**, and builds a new Merkle tree with root $root'$, which she then publishes:
 
-### 多项式承诺
+$$
+[y_1, z, y_3, y_4]
+$$
 
-欺诈证明仍然不够优雅，它存在以下问题：
+Then she **withholds $z$**, only releasing the other chunks.
 
-1. 依赖于一个强大的全节点，这增加了网络的中心化程度，如果少量的全节点遭受到攻击，无法发出欺诈证明，将使得不可用的数据被误认为可用。
-2. 如果采样节点没有连接到至少一个诚实节点，将无法接受到欺诈证明，这也被称为日蚀攻击。这是一个致命的问题，但不是其缺陷，因为日蚀攻击的风险普遍存在于点对点网络中。
+![image.png](/en/merkle-tree-fraud.png)
 
-除此之外，还有一个更恼人问题： 实际应用中数据往往非常大，带来默克尔树的层级很大，使得证明本身就非常大，早就超过数据块本身的大小，这将使得整个系统非常低效。我们可以一次性解决以上所有问题，这就是一种被称为多项式承诺的技术。
+This leads validators to **successfully sample** the dataset and mistakenly conclude it is available. But here’s the problem:
 
-回想一下恶意用于是如何通过默克尔证明来作弊的，对方构造了一个虚假的点 $(x_2, z)$ ，并和合法的数据一起生成新的默克尔根，使得系统认为虚假数据是合法的。本质上，这是由于默克尔树只对数据本身负责，而无法识别背后的直线。多项式承诺的不同之处在于，它不是为数据生成指纹，而是为直线本身生成指纹，我们称为承诺。直线上的每个点都可以生成一个证明，我们只需要数据块、证明、承诺就可以验证其合法性，作弊者无法为一个虚假的 $z$ 生成证明来通过验证。
+* We **can’t challenge** $root'$ using $z$, because we don’t know its contents.
+* Even if we recover the correct $y_2$, we **can’t generate a valid Merkle proof** for $root'$, because $y_2$ doesn’t belong to that tree.
 
-多项式承诺还带来了另一个好处，证明相对小得多，而且我们还可以通过子向量证明让多个数据块共用同一个证明，这对采样和存储来说十分高效。
+Thus, the malicious transaction is **successfully hidden** within seemingly available data—undetectable and uncorrectable. While this is a theoretical example, in practice **any dishonest encoding** introduces serious security risks.
 
-自此，我们不再需要欺诈证明高效地实现数据可用性。
+The solution is **Fraud Proofs**.
+
+### Fraud Proofs
+
+To prevent such attacks, we introduce an additional role: the **honest full node**. This powerful node collects enough data to reconstruct the original dataset and **re-encodes it** to generate the correct Merkle root. If it finds that $root'$ is incorrect, it generates a **fraud proof**—containing enough chunks and corresponding proofs to show that the published data batch is invalid.
+
+When a sampling node successfully samples data, it does **not immediately confirm** availability. Instead, it waits within a **time window** to see if any fraud proof appears. If one is received, the dataset is deemed **unavailable**. If none appears, the data is **finally confirmed as available**.
+
+This is the fraud-proof-enhanced version of DAS—providing an additional layer of security.
+
+### Polynomial Commitments
+
+While fraud proofs are effective, they suffer from three main limitations:
+
+1. **Dependence on full nodes**: Fraud detection requires powerful full nodes, increasing centralization. If too few exist, attackers could evade detection.
+2. **Susceptibility to eclipse attacks**: If a sampling node is isolated from honest nodes, it may never receive fraud proofs.
+3. **Proof overhead**: Merkle tree proofs can be larger than the data itself when datasets are huge.
+
+There is a more elegant solution that solves all of these problems at once: **Polynomial Commitments**.
+
+Recall how a malicious block producer cheated using Merkle proofs: by constructing a fake point $(x_2, z)$ and building a new Merkle root along with valid data. The system mistakenly accepts the dataset as available because Merkle Trees only verify individual data chunks, not the underlying polynomial (line).
+
+Polynomial Commitments work differently: instead of generating a fingerprint for each data point, they generate a **commitment to the entire polynomial**. Every point on the polynomial can be proven individually. With just a **data chunk, a proof, and the original commitment**, validators can verify correctness. **Attackers cannot forge a valid proof** for a fake point like $z$.
+
+In summary:
+
+* **Merkle Trees** generate fingerprints for **each data chunk**.
+* **Polynomial Commitments** generate a fingerprint for the **entire polynomial**.
+
+In a Polynomial Commitment scheme, a validator only needs to know:
+
+* A data point $(x, y)$;
+* A proof associated with it;
+* The original commitment value.
+
+The proof size is relatively small, and we can even optimize it so multiple chunks share the same proof. With Polynomial Commitments, **fraud proofs are no longer necessary**, enabling highly **efficient and robust** data availability checks.

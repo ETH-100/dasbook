@@ -1,29 +1,61 @@
-## 从大区块到 DA
+# Concept
 
-区块链无非是在一定时间内，对一批最新交易达成一致性。这一批交易构成了一个区块，全球各地的节点下载区块，并验证交易是否被正确执行，最终所有的节点对合法区块达成一致性。
+## From “Big Blocks” to “Data Availability (DA)”
 
-显而易见，让链更快就是在相同时间内处理更多交易，而更多交易意味着更大的区块。现在有一个好消息和一个坏消息。坏消息是达成一致性的前提是，区块数据需要首先传播到世界各地的节点，这在点对点网络中将耗费大量的时间，而且需要牺牲稳定性，最终得不偿失。有些解决方案则是牺牲去中心化，只允许少量节点验证，这显然是不能让人满意的。
+At its core, a blockchain is simply a system for reaching consensus on a batch of recent transactions within a certain period. These transactions are bundled into a block, which is then downloaded and verified by nodes around the world to ensure each transaction was correctly executed, and ultimately to achieve global agreement on the block's validity.
 
-好消息时，得益于被称为零知识证明的技术，我们无需区块数据，也能验证区块是否被正确执行。零知识证明是另一个话题，这不是我们的重点，我们只需要了解其简单的原理：
+To make blockchains “faster,” the intuitive solution is to process more transactions in the same amount of time. However, more transactions mean larger blocks, which brings both good and bad news.
 
-链上包含了庞大的实时数据，被称为状态，其中包含了每个用户的余额。这个庞大的数据集被压缩成了一个根，相当于人类的指纹。即便数据发生了一点变化，指纹也会大不相同，通过指纹我们就可以验证数据是否正确。区块链接受交易，将旧的数据转换为新的数据，旧的指纹也被新的指纹代替。
+**The bad news**: For nodes to reach consensus, they must first have access to the block data. In a peer-to-peer network, rapidly disseminating large chunks of data across the globe is both time-consuming and prone to failure. Some solutions try to circumvent this challenge by sacrificing decentralization—allowing only a few nodes to verify transactions—but this goes against the core values of blockchain.
 
-以往我们的范式是：节点接受区块中的交易，计算出新的状态，生成新的指纹，所有区块对指纹达成共识。现在，验证节点只需要接受证明、新的指纹即可，相对于区块数据来说，它们都相当小，可以容纳大规模的矿工加入网络。只有那些特定的节点，例如负责生成区块、提供接口用来接受用户交易的节点才需要完整状态数据。
+**The good news**: With the advent of Zero-Knowledge Proofs (ZKPs), we no longer need all nodes to receive the full block data in order to verify that transactions were correctly executed. ZKPs are a vast topic, but here we only need to understand their basic principle.
 
-虽然这是个好消息，但它同时也延伸出一个坏消息。假设我有 100ETH ，我向朋友转账了 80ETH ，现在我的新状态是 20ETH 。矿工接受了我的交易，并正确计算了新的状态根和证明，发布到网络后，所有验证者对新的状态根达成了共识。
+### The ZKP Model
 
-但这个矿工并没有对外公布我只剩 20ETH 的事实，现在我需要再次转账 10ETH ，其他矿工由于无法确定我到底有多少余额，因此无法处理我这笔交易。整个网络目前只有那名恶意矿工可以生产区块，并可以随时停止整个网络，从做空中获利。为了避免这种情况的出现，除了验证新的状态根计算是否正确的同时，还必须确保这名矿工公布了我新的余额数据。
+Each blockchain maintains a complete, real-time set of data, such as all account balances, known as the “state.” When a block is added, transactions within it update this state, replacing the old "fingerprint" with a new one. This fingerprint (state root) is derived from a massive dataset computed from all historical transactions. Even a small change—like updating a single balance—can dramatically change the fingerprint. Thus, by verifying whether the new state root is valid, we can confirm that the block was correctly executed.
 
-为了实现这一点，一个简单的办法是所有矿工在验证前首先下载完整数据，但这样一来扩容已失去意义。一种被称为数据可用性的技术可以解决这个问题，矿工无需下载所有数据，仅需要一点点带宽成本用来采样，就可以确保完整的数据已经存在。乐观 Rollup 的实现与此大不相同，但底层原理大致相似，同样需要数据可用性。实际上，数据可用性的本意是在 L1 层面进行扩容。
+![image.png](/en/ZKP.png)
 
-## 什么是 DAS
+In the traditional model, nodes receive the full block, compute the new state, and agree on the new fingerprint.
 
-我们已经知道，如果一个恶意矿工拒绝公布新状态的数据，那么即使他提供了正确的状态根和证明，网络仍然会陷入停滞。为了解决这个问题，我们必须要求所有矿工都能在验证时确认“数据已经被正确地公开”，而不需要事先下载全部数据。
+In the ZKP model, block producers must additionally generate a proof that their computations are correct. Verifiers only need to check this proof and the new fingerprint—no need to download the full block—which significantly lowers the barrier to participation and allows more nodes to join consensus.
 
-这就像有人通过点对点网络上传了一部电影，你需要在下载电影之前预先知道它能不能被完整下载，从而避免浪费时间。我们将电影切分为成千上万个数据块，并给每个块编上编号，之后从网络中试着下载一块随机块。如果能成功，我们的信心就多了一份。我们只需要多下载几个随机块，信心就会不断增加，直到我们确信：电影被完整地上传到了网络。
+But this brings a new problem.
 
-这就是 DAS 的核心原理： 通过采样来概率性地确认，某个区块的数据是可用的，但到这里我们还不能完全实现这一点。你也许有过这样的经历：在某个点对点下载软件中，耗费数小时终于下载了一部电影，但进度条最终卡在 99.9%，始终无法完成。你翻来覆去等着最后一块数据，却迟迟不来，这时候你会意识到，这部电影的数据可能并不完整——而你，直到最后才知道这一点。即便你提前进行了上百次采样，仍无法识别出其中某个数据块的丢失，**除非你真的遇上了那缺失的一块，但这几率微乎其微**。换句话说，我们只能通过简单的抽样来确保数据大概率是可以被下载的，但并不能确保数据的完整性。对于电影来说这无伤大雅，最多浪费电时间，但应用到区块链上则非常致命，它可能带来出块停滞、被隐藏的恶意交易等问题。
+### Data Availability
+Imagine: I have 100 ETH and send 80 ETH to a friend. A block producer processes this transaction, computes a new state root (I now have 20 ETH), and generates a zero-knowledge proof to confirm this state transition is correct. Validators accept the new state root after verifying the proof.
 
-既然无法通过抽样确定数据 100% 是完整的，我们可以退而求其次，确保网络中至少有 50% 的数据。这在概率上容易多了，随机抽样一个数据块，即有 50% 的信心确保这一点。反复抽样多次，你的信心将呈指数级增长，当抽样七次时，你的信心指数是 %。并且，这一切和数据的大小无关。
+![image.png](/en/da.png)
 
-为什么我们只需要 50% 的数据？因为原始数据经过编码，我们可以通过任意一半的数据块来恢复出原始数据。
+But what if the block producer does not reveal the fact that I now only have 20 ETH? Then, when I try to send another 10 ETH in the future, other producers cannot verify whether I have sufficient balance. This means only the original producer, who holds the full data, can continue producing blocks. They effectively control the entire network and could halt it at any time to profit by shorting the market.
+
+To prevent this, we must not only verify the correctness of the new state root, but also ensure that the producer has published the new balance data.
+
+A simple way to do this would be to have all validators download the full block data before verifying, but that defeats the purpose of scaling. This is where Data Availability (DA) comes in: it allows validators to confirm that the full data is available on the network without downloading it all—ensuring anyone can access the data if needed.
+
+This is the core idea behind L1 scaling and ZK Rollups. While Optimistic Rollups work a bit differently, they share a similar underlying principle.
+
+## What Is DAS?
+
+We’ve seen that if a malicious block producer withholds post-execution state data, the network could stall—even if they provide a valid state root and ZK proof. To solve this, we must ensure that verifiers can probabilistically confirm that data was indeed fully published to the network—without downloading all of it.
+
+It's like someone uploading a movie via P2P. You don’t want to spend hours downloading it only to find out the full file isn’t available. So instead, before downloading, you do a few tests: split the movie into thousands of numbered chunks, and try downloading some random ones. If you can download a few successfully, your confidence increases. Keep sampling more chunks, and eventually, you’re reasonably sure the full movie exists online.
+
+That’s the core idea of Data Availability Sampling (DAS): probabilistically confirm that data is "available" by randomly sampling small portions. But it’s not quite that simple.
+
+You might have experienced a download stuck at 99.9%—the final chunk is missing, and no matter how many times you retry, you can’t get it. Only then do you realize: the file was never fully uploaded. Even if you sampled dozens or hundreds of times, you may still have missed the missing chunk. Unless you randomly hit it, you’ll never know it’s gone.
+
+In other words, sampling can give high confidence that the data is available, but not a deterministic guarantee of completeness. For movies, that’s just annoying. For blockchains, it can be catastrophic—leading to halted blocks, hidden transactions, or even network attacks.
+
+So we shift strategies. Since we can’t guarantee 100% completeness through sampling, we aim for something "good enough": ensure that at least 50% of the data is available on the network. That’s much more feasible:
+
+![image.png](/en/das.png)
+
+- With 50% of data available, a random sample has a 50% chance of hitting it;
+- Sampling twice and missing both has a probability of 0.5 × 0.5;
+- The more you sample, the lower the chance of missing everything;
+- After just 7 samples, confidence in data availability is extremely high.
+
+Most importantly, this confidence is independent of data size. Whether the block is 1MB or 1GB, sampling requires only minimal bandwidth.
+
+Why is 50% enough? Because the original data is encoded using erasure codes—so as long as you get any 50% of the chunks, you can reconstruct the full data. That’s the magic of DAS: providing probabilistic guarantees of availability, enabling secure and scalable data propagation with minimal resource consumption.

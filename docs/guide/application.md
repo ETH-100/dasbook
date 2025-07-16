@@ -1,46 +1,65 @@
-L1 扩容和 L2 扩容是一个庞大的话题，并不是我们的重点内容，在这里仅从数据可用性的角度作简要的介绍，你可以在[扩容](https://ethereum.org/zh/developers/docs/scaling/)资料中获得更详细的描述。
 
-### **L1 扩容**
+# Applications
 
-最直接的扩容方式当然是让区块链本身直接容纳更多的数据，允许更多的交易同时被处理，数据可用性和零知识证明让我们可以实现这一点。我们回顾一下这个简单的基本流程：
+Scaling L1 and L2 is a vast and complex topic. This article won’t cover everything in detail, but instead focuses on data availability as a core perspective. For a more comprehensive overview, refer to the [Ethereum scaling documentation](https://ethereum.org/en/developers/docs/scaling/).
 
-- 数据有效：通过 DAS 确认数据可用性；
-- 计算有效：验证一个简短的证明即可确认区块有效；
+## L1 Scaling
 
-这两点指向了一个极端的终极形态，验证者不需要存储状态数据，也不需要任何交易数据，只需要一个轻量的证明就可以验证区块是否得到了正确执行。这种极低的资源消耗，使得可以在手机或浏览器插件中运行一个以太坊验证者节点。另外，正如在前面概念中讨论的一样，我们仍然需要数据可用性来确保状态增量被公开。
+The most direct way to scale is to allow the base layer (L1) to handle more transactions. Thanks to the combination of **Data Availability Sampling (DAS)** and **Zero-Knowledge Proofs (ZKP)**, this is becoming feasible:
 
-那么，有谁来获取交易数据并生成证明？这并不是一个简单的问题，零知识证明需要大量的计算，并在一个区块时间内完成。最直接的方法是将计算交给资源丰富的大型节点，但这会使得网络中心化（虽然我们可以在应用层暂时性缓解这一点）。根本的途径是减少证明生成的成本，其中包括共识层本身的计算以及 EVM 的证明。
+* **Data Availability**: DAS ensures that on-chain data has been fully published;
+* **Execution Validity**: ZKP verifies the correctness of transaction execution without needing to re-run the computations.
 
-共识层（协议）的 ZK 化，涉及到区块结构的修改、共识机制、无状态客户端的成熟等等一系列前置条件。另一方面，由于 EVM 在设计时无法预见到 ZK 友好的要求，导致证明计算非常低效，因此更换 ZK 友好的虚拟机同样是一个重要的优化选择。
+Together, these enable an extreme but powerful model: validators no longer need to store state or download transaction data. A lightweight proof is all that's required to verify an entire block. The validator's workload is so minimal that verification could run on a mobile device or browser extension.
 
-从长期出发，将这种扩容机制暂时转移到应用层是更为稳健的做法，目前 zkEVM 已经取得的重大进展正是这个机制带来的优势。而且，L2 总是比 L1 具有更高的效率，可以满足应用层的不同需求，它将会长期存在。
+Of course, this doesn't mean the computation disappears—generating ZKPs is still very expensive and must be completed within the block time. This leads to a crucial question: **who generates the proof?**
+
+The most straightforward solution is to rely on large, resource-rich nodes. However, this introduces centralization risks. A fundamental solution requires reducing the cost of generating proofs—this includes both the proof of consensus and the proof of EVM execution. The EVM, not originally designed for ZK-friendliness, presents particular challenges and has become a bottleneck for efficient proof generation. Optimizing the virtual machine for ZK compatibility is thus a major research direction.
+
+ZK-ifying the consensus layer also requires foundational changes—modifying block structures, adjusting consensus mechanisms, and most importantly, building robust stateless clients. In the long term, it’s more stable to first deploy these advanced mechanisms at the application layer. The progress of zkEVM exemplifies this strategy. Moreover, L2s tend to be more efficient than L1 and will continue to serve diverse application-layer needs.
 
 ## Rollup
 
-Rollup 是扩容中的另一条路径，它将区块链的执行任务从主链移出，只保留数据和结算的最小职责。Rollup 在链下完成执行，主链承担数据可用性职责，并验证计算结果的正确性。Rollup 可以理解为一种执行分片。
+Rollups offer another scaling pathway. They offload execution to off-chain systems while retaining on-chain data and settlement. You can think of this as a kind of *execution sharding*:
 
-目前 Rollup 的基本框架已经非常成熟：通过主链提供结算和数据可用性，链下完成执行与状态更新。但在实践中，不同的 Rollup 在证明机制、数据发布方式、最终性保障策略上仍有显著差异。这些差异直接影响到性能、安全性和应用场景的适用性。
+* Execute transactions and update state off-chain;
+* Publish data and results to the main chain for verification and settlement.
+
+The Rollup design is becoming mature, but there are still significant differences in implementations—particularly in their proof systems, data publishing strategies, and finality guarantees. These design choices directly affect performance, security, and applicability.
 
 ### ZK-Rollup
 
-ZK-Rollup 采用零知识证明技术，将链下执行过程封装成一个有效性证明，并将证明和状态根提交到主链合约。主链只需验证这份证明即可确认链下过程的正确性，不需要执行任何交易。一旦证明通过验证，该批交易便被确认。
+ZK-Rollups use zero-knowledge proofs to compress off-chain execution into a validity proof, submitted alongside the new state root to an on-chain contract. The main chain only verifies the proof’s validity to confirm the correctness of all transactions—without re-executing any of them.
 
-在执行方面，ZK-Rollup 的实时性要求远远低于 L1 ZK 。ZkEVM 试图完全复现 EVM 的行为逻辑，使得现有的合约可以在不变动的情况下迁移至 Rollup 环境。但如前所述，EVM 本身并不适合直接转换为电路，导致证明计算资源需求极高，成为效率瓶颈。因此，多数系统采用定制的 zkVM 设计，或者在电路级别引入高度工程化的优化，以便在几分钟甚至数十秒内生成批次证明。
+In addition, ZK-Rollups must make a cryptographic commitment to the state delta and bind this to the proof. This ensures that the published data genuinely causes the correct state transition and that the new state can be reconstructed.
+
+Compared to L1 ZK scaling, ZK-Rollups have much lower real-time requirements. zkEVMs aim to replicate full EVM behavior, allowing existing smart contracts to migrate without modification. However, since the EVM is not ZK-friendly, generating proofs is extremely costly and becomes a bottleneck. Some systems solve this by designing custom zkVMs or introducing highly optimized circuits to allow efficient proof generation over batched transactions.
 
 ### Optimistic Rollup
 
-相对而言，Optimistic Rollup 的路径更偏向工程实用主义。它假设链下执行过程是正确的，在无需证明的情况下，直接向链上提交结果。之后设置一个挑战期，任何观察者如果发现欺诈行为，可以在挑战期内提交欺诈证明。一旦挑战成功，错误的状态将被撤销，从而确保安全性。
+In contrast to ZK-Rollups, Optimistic Rollups don’t require expensive computation to generate validity proofs. Instead, they introduce a **challenge window** during which the results are not yet finalized.
 
-挑战的原理可以理解为在链上实现一个等效 EVM 的合约，挑战者将交易数据发送给合约重新执行，如果最终计算结果和先前提交的并不一致，则挑战成功。值得一提的是，在实践中这种单步挑战实际上是不可行的，因为我们无法实现完全等效的 EVM 合约，任何细微的差别都将带来安全问题。
+Optimistic Rollups take a pragmatic engineering approach: they assume off-chain execution is correct and submit results to the main chain without a proof—while allowing challenges during the window. If any observer finds an error, they can submit a fraud proof within the challenge period.
 
-很明显，挑战者首先要获得交易数据才能发现执行错误，才能使用交易数据发起挑战。如果攻击者隐藏了交易数据，将使得没有任何用户可以发起挑战。Optimistic Rollup 需要将所有交易数据完整地提交至主链，比 ZK-Rollup 更依赖数据可用性保障。
+Conceptually, this works by deploying an EVM-equivalent contract on-chain. The challenger submits the disputed transaction data for re-execution. If the resulting output diverges from the submitted result, the challenge succeeds. However, in practice, faithfully replicating the EVM in a contract is infeasible—any minor differences (like gas cost rules) could introduce vulnerabilities.
+
+A key point: challengers **must have access to transaction data** to re-execute and generate a fraud proof. If a malicious actor hides the data, challenges become impossible. Therefore, **Optimistic Rollups must publish all transaction data** on-chain in a data-available format—making them **more dependent on data availability** than ZK-Rollups.
 
 ## Validium
 
-与 Rollup 不同的是，Validium 不要需要主链提供数据可用性，而是直接转移至链下。执行结果依然通过零知识证明提交到主链验证，主链只确保状态更新是合法的，而不关心交易数据本身是否可用。
+Unlike standard Rollups, Validium **does not rely on the base chain for data availability**. Instead, it stores data off-chain, and the main chain only verifies the ZKP attesting to state changes.
 
-这使得链上数据的使用大幅减少，交易成本也随之下降，从而支持更高的吞吐量，并且费用更低。Validium 适用于对数据上链要求较低的场景，例如游戏、身份、NFT、企业链下账本等。另外，在一些需要数据隐藏的应用中，Validium 也有其独特的优势。
+This significantly reduces on-chain data burden, lowering transaction costs and increasing throughput. Validium is particularly suited for use cases that don’t require on-chain data—such as games, identity systems, NFTs, or enterprise ledgers. Additionally, Validium offers unique advantages for privacy-preserving applications.
 
-Validium 的数据在链下存储，为了提升安全性，通常会引入一组许可节点组成的数据可用性委员会（Data Availability Committee，简称 DAC）。这些节点在链下共同维护一系列必要数据，并在必要时对外提供。这引入了额外的假设，即委员会中多数成员是诚实的，能够维持数据可用性。一旦多数节点失效、宕机或协同作恶，系统将失去数据访问能力，用户资产无法提取，系统进入冻结状态。
+To ensure off-chain data remains secure, Validium typically introduces a **Data Availability Committee (DAC)**—a set of permissioned nodes responsible for storing and serving the data. The system assumes a majority of these DAC nodes are honest. If most nodes go offline or behave maliciously, users may be unable to retrieve their assets, resulting in system freeze.
 
-为了避免这一点，用户可以自行直接退出 Validium 合约，只需要提供默克尔证明，以证明自己的账户数据，但这种机制只是一次性安全保障，并非持续的安全机制。这催生了 Volition，它在 Validium 的基础上提供了交易层面的可选性，用户可以为每笔交易决定是否将数据发布到主链上，享受 Rollup 等价的安全性。这种设计允许开发者根据用户、用途和资金规模动态调整安全模型，而主链保持统一的验证逻辑。
+To mitigate this risk, Validium offers **one-time exit mechanisms**. A user can submit a Merkle proof on-chain to validate their account state and exit the system. However, this is only a fallback—it cannot replace the guarantee of continuous data availability.
+
+## Volition
+
+Volition is an evolution of Validium, offering users **a per-transaction choice** of whether to publish data on-chain:
+
+* If data is posted on-chain, it achieves Rollup-equivalent security;
+* If kept off-chain, it enjoys the efficiency and low cost of Validium.
+
+This allows developers to dynamically adjust the security model based on user needs, use case sensitivity, and value scale—while preserving a unified verification logic on the main chain.
