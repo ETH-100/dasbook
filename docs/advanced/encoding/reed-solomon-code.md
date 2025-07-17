@@ -1,111 +1,117 @@
-RS 编码（Reed-Solomon Code）是数据可用性中的核心编码机制，它的基本原理是将数据视为多项式的值（或系数），通过插值重构多项式。只要收到足够多的任意部分数据，就能够恢复完整的原始数据。即原始数据为 $m$ 个点，经过编码为 $n$ ( $n>m$ )个点，接受者只需要收到其中任意 $k$ ( $k<n$ )  个点，则可以恢复原始 $m$ 个点。
+# Reed-Solomon Encoding
 
-RS 编码运行在有限域 $\mathbb{F}_q$ 上，通常 $q = 2^m$ 。
+Reed-Solomon (RS) codes are a core component in data availability (DA) systems. The basic principle is to treat the data as values (or coefficients) of a polynomial and reconstruct the original polynomial via interpolation. As long as enough partial data points are received, the full original data can be recovered. Specifically, if the original data consists of $m$ points and is encoded into $n$ points ($n > m$), then any $k$ ($k \geq m$) of the $n$ points are sufficient to recover the original $m$ data points.
 
-- 原始数据块： $m = k$ ，可以看作是 $\mathbb{F}_q$ 中的元素
-- 编码数据块： $n > k$
-- 最多可以容忍 $t = \frac{n - k}{2}$ 个错误，或者 $n - k$ 个丢失
+RS encoding operates over a finite field $\mathbb{F}\_q$, typically with $q = 2^m$.
 
-## 编码
+* Original data blocks: $m = k$ elements, viewed as values in $\mathbb{F}\_q$
+* Encoded data blocks: $n > k$
+* Can tolerate up to $t = \frac{n - k}{2}$ errors, or $n - k$ erasures
 
-1. 设原始数据为 $a_0, a_1, ..., a_{k-1}$
-2. 构造多项式：
-    
-    $$
-    f(x) = a_0 + a_1 x + a_2 x^2 + \cdots + a_{k-1} x^{k-1}
-    $$
-    
-3. 选定 $n$ 个不同的域中点 $x_1, ..., x_n$，计算其对应的值 $f(x_1), ..., f(x_n)$，作为编码输出。
+## Encoding
 
-## 解码
+1. Suppose the original data is $a\_0, a\_1, ..., a\_{k-1}$
 
-只需要收到任意 $k$ 个点 $(x_i, f(x_i))$，则可以通过拉格朗日插值还原出原始多项式 $f(x)$，从而恢复数据。
+2. Construct the polynomial:
 
-拉格朗日插值通过已知的点来计算原始多项式，首先通过点计算每个基函数 $L_k(x)$ 。例如，对点 $(x_0,y_0)$ 的基函数：
+   $$
+   f(x) = a_0 + a_1 x + a_2 x^2 + \cdots + a_{k-1} x^{k-1}
+   $$
 
-$$
-L_0(x)=\frac{(x−x_1)(x−x_2)⋯(x−x_n)}{(x_0−x_1)(x_0−x_2)⋯(x_0−x_n)}
-$$
+3. Choose $n$ distinct points in the field, $x\_1, ..., x\_n$, and compute their values $f(x\_1), ..., f(x\_n)$, which are used as the encoded output.
 
-其中，分子为除 $x_0$ 的所有 $(x-x_i)$ 的形式相乘，这意味着在这些 $x_i$ 在 $L_0(x)$ 中取值为零，分母为所有 $x_0-x_i$ 形式相乘，这用来归一化，即当 $x=x_0$ 时， $L_0(x)=1$ 。最后每个 $y_k \cdot L_k(x)$ 之和即为 $f(x)$ ：
+## Decoding
+
+To recover the data, only any $k$ points $(x\_i, f(x\_i))$ are needed. The original polynomial $f(x)$ can be reconstructed using Lagrange interpolation.
+
+Lagrange interpolation reconstructs the polynomial by computing basis polynomials $L\_k(x)$ from the known data points. For example, the basis polynomial corresponding to point $(x\_0, y\_0)$ is:
 
 $$
-f(x) = y_0 \cdot L_0(x) + y_1 \cdot L_1(x)
+L_0(x) = \frac{(x - x_1)(x - x_2)\cdots(x - x_n)}{(x_0 - x_1)(x_0 - x_2)\cdots(x_0 - x_n)}
 $$
 
-另外，如果收到的数据存在错误，需要使用 Berlekamp-Massey 算法或 Euclid 算法等进行纠错，这部分称为纠错 RS。在 DA 领域，我们只需要处理数据丢失的问题。使用拉格朗日插值来计算原始数据，需要 $O(n^2)$ 的复杂度，在实际应用中，我们使用快速傅里叶变换，它的复杂度为 $O(n \log n)$ 。
+The numerator is the product of terms $(x - x\_i)$ for all $x\_i \ne x\_0$, which ensures that $L\_0(x\_i) = 0$ for $i \ne 0$. The denominator is a normalizing factor to ensure $L\_0(x\_0) = 1$. The full polynomial is then reconstructed as:
 
-## 示例
+$$
+f(x) = y_0 \cdot L_0(x) + y_1 \cdot L_1(x) + \cdots
+$$
 
-我们选定在有限域 $\mathbb{F}_7 = \{0, 1, 2, 3, 4, 5, 6\}$ 上进行示例。
+If errors are present in the received data, decoding must use error-correction algorithms like Berlekamp-Massey or the Euclidean algorithm. However, in the context of DA, we typically only deal with erasures (missing data), so Lagrange interpolation suffices.
 
-- 原始数据：2 个符号 $(a_0, a_1) = (3, 4)$
-- 编码目标：从 2 个数据生成 4 个编码点
-1. **构造原始多项式**
+The computational complexity of Lagrange interpolation is $O(n^2)$, but in practice, Fast Fourier Transform (FFT) techniques can reduce this to $O(n \log n)$.
 
-首先我们把原始数据表示为系数形式的多项式：
+## Example
+
+Let’s work over the finite field $\mathbb{F}\_7 = {0, 1, 2, 3, 4, 5, 6}$.
+
+* Original data: 2 symbols $(a\_0, a\_1) = (3, 4)$
+* Encoding goal: Generate 4 encoded points from 2 data points
+
+### Step 1: Construct the Original Polynomial
+
+We represent the original data as a polynomial over $\mathbb{F}\_7$:
 
 $$
 f(x) = 3 + 4x \in \mathbb{F}_7[x]
 $$
 
-1. 编码
+### Step 2: Encode
 
-我们选择 4 个不同点进行评估，选择 $x = 0, 1, 2, 3$：
+We evaluate the polynomial at 4 distinct points: $x = 0, 1, 2, 3$
 
-| $x$ | $f(x) = 3 + 4x \mod 7$ |
-| --- | --- |
-| 0 | $3 + 4 \cdot 0 = 3$ |
-| 1 | $3 + 4 \cdot 1 = 7 \equiv 0$ |
-| 2 | $3 + 4 \cdot 2 = 11 \equiv 4$ |
-| 3 | $3 + 4 \cdot 3 = 15 \equiv 1$ |
+| $x$ | $f(x) = 3 + 4x \mod 7$        |
+| ----- | ------------------------------- |
+| 0     | $3 + 4 \cdot 0 = 3$           |
+| 1     | $3 + 4 \cdot 1 = 7 \equiv 0$  |
+| 2     | $3 + 4 \cdot 2 = 11 \equiv 4$ |
+| 3     | $3 + 4 \cdot 3 = 15 \equiv 1$ |
 
-所以编码后的 4 个数据是：
-
-$$
-(0, 3), (1, 0), (2, 4), (3, 1)
-$$
-
-1. 恢复
-
-假设我们只收到了两个点：
+So the 4 encoded points are:
 
 $$
-(1, 0), (2, 4)
+(0, 3),\ (1, 0),\ (2, 4),\ (3, 1)
 $$
 
-我需要通过拉格朗日插值法来恢复原始多项式： $f(x) = a_0 + a_1 x$ 。我们构造：
+### Step 3: Recover
+
+Suppose we receive only two points:
+
+$$
+(1, 0),\ (2, 4)
+$$
+
+We use Lagrange interpolation to recover the original polynomial $f(x) = a\_0 + a\_1 x$. Construct:
 
 $$
 f(x) = y_1 \cdot L_1(x) + y_2 \cdot L_2(x)
 $$
 
-其中：
+Where:
 
 $$
-\ell_1(x) = \frac{x - x_2}{x_1 - x_2} = \frac{x - 2}{1 - 2} = -(x - 2)
+L_1(x) = \frac{x - x_2}{x_1 - x_2} = \frac{x - 2}{1 - 2} = -(x - 2)
 $$
 
 $$
-\ell_2(x) = \frac{x - x_1}{x_2 - x_1} = \frac{x - 1}{2 - 1} = x - 1
+L_2(x) = \frac{x - x_1}{x_2 - x_1} = \frac{x - 1}{2 - 1} = x - 1
 $$
 
-工作在 $\mathbb{F}_7$，所以：
+Working over $\mathbb{F}\_7$, we simplify:
 
-- $-1 \equiv 6$
-- $L_1(x) = 6(x - 2) = 6x + (-12) \mod 7 = 6x + 2$
-- $L_2(x) = x - 1 \mod 7$
+* $-1 \equiv 6 \pmod{7}$
+* $L\_1(x) = 6(x - 2) = 6x - 12 \equiv 6x + 2$
+* $L\_2(x) = x - 1$
 
-代入：
+Substitute into the interpolation formula:
 
 $$
 f(x) = 0 \cdot (6x + 2) + 4 \cdot (x - 1) = 4x - 4 \equiv 4x + 3 \pmod{7}
 $$
 
-于是恢复出：
+Thus, we recover:
 
 $$
 f(x) = 3 + 4x
 $$
 
-这就是我们原始的数据 $a_0 = 3, a_1 = 4$，成功恢复。
+This matches our original data $a\_0 = 3$, $a\_1 = 4$ — recovery succeeded.

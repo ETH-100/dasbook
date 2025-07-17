@@ -1,24 +1,30 @@
-## 一维扩展（1D）
+# Data Matrix Encoding
 
-为了实现冗余并支持通过采样确定数据可用性，一种简单的扩展方式是将原始数据视为一维数组，即将数据划分为不同的行。之后我们再对每一行进行编码：将 $n$ 个原始数据视为多项式取值，在更大的定义域上进行插值扩展，最终生成长度为 $2n$ 的编码数据。编码后的数据，只需要获取其中任意 $n$ 个数据，即可还原原始数据。Reed-Solomon 编码正是这种方案的经典代表。
+## 1D Extension
 
-如果某一行中有超过一半的数据被隐藏或损坏，那么它就无法还原。为了隐藏某个数据点，攻击者必须隐藏至少 50% 的数据。这为抽样提供了一定的可行性，但行数据之间并无关联，针对某个行的抽样只能代表该行数据可用性本身。
+![image.png](/en/1d.png)
 
-## 二维扩展（2D）
+To introduce redundancy and enable data availability sampling, a simple approach is to treat the original data as a one-dimensional array and divide it into rows. Each row is then independently encoded: we treat \$n\$ original values as evaluations of a polynomial, extend it by interpolation over a larger domain, and produce \$2n\$ encoded points. The encoded data can be recovered from any \$n\$ of these \$2n\$ points. Reed-Solomon encoding is a classical example of this method.
 
-二维数据扩展将原始数据视为 $m \times n$ 的矩阵，对每一行进行扩展，形成 $2m \times n$ 的矩阵，之后在列方向上扩展为 $2m \times 2n$ 的矩阵。通过 2D 矩阵扩展后的数据是原始数据的四倍大小，其中每一个 Cell 都在行和列两个方向上形成冗余能力，即 2D 矩阵都可以在行方向和列方向上恢复数据。
+However, if more than half the data in a row is lost or corrupted, the row becomes unrecoverable. To hide a single data point, an adversary must corrupt at least 50% of the row. This gives 1D encoding some fault tolerance, but since rows are encoded independently, sampling only reflects the availability of individual rows, not the dataset as a whole.
 
-### 采样效率
+## 2D Extension
 
-为了隐藏某一个原始数据，攻击者至少需要至少隐藏 25% 的数据。相对于 1D 扩展，二维扩展将每行联系起来，采样是增对整体数据，而非某行或某列。虽然数据量变得更大，但采样效率得到了提高。
+In 2D extension, the original data is arranged as an \$m \times n\$ matrix. First, each row is extended to form a \$2m \times n\$ matrix; then each column is extended to produce a \$2m \times 2n\$ matrix. This yields a dataset four times the original size. Each cell in the 2D matrix gains redundancy from both row and column directions, allowing for recovery in either axis.
 
-我们可以简单估算一下所需的采样数量，假设攻击者破坏了超过 $25%$ 的数据，使得整个矩阵不可恢复。在最坏情况下，每一次随机采样命中损坏数据的概率至少为 $0.25$。采样节点连续采样 $k$ 个独立数据点都未命中错误的概率为：
+![image.png](/en/2d.png)
+
+### Sampling Efficiency
+
+To hide a single original data point in a 2D matrix, an adversary must corrupt at least 25% of the data. Compared to 1D extension, 2D encoding introduces correlation across rows and columns. Sampling reflects the availability of the entire dataset, not just one dimension. Although the data size increases, the sampling efficiency improves.
+
+We can estimate the required number of samples. Suppose an attacker corrupts more than 25% of the data, rendering the matrix unrecoverable. The worst-case probability that a random sample hits a corrupted cell is at least \$0.25\$. Then, the probability that \$k\$ independent samples all miss corrupted cells is:
 
 $$
 P_{\text{undetected}} \le (1 - 0.25)^k = 0.75^k
 $$
 
-我们可以让这个未能检测到 25% 数据遭破坏的概率小于 $10^{-9}$ ，来计算所需的采样数量：
+To ensure that the undetected failure probability is less than \$10^{-9}\$, we solve:
 
 $$
 0.75^k < 10^{-9}
@@ -26,57 +32,75 @@ $$
 k > \frac{\log(10^{-9})}{\log(0.75)} \approx 73
 $$
 
-因此，采样节点随机抽样约 $73$ 个数据点，就能在攻击者破坏 25% 数据的情况下，以超过 $99.9999999%$ 的置信度检测到错误。这个所需样本数量和原始数据的大小没有关系，具有常数级复杂度，这是 DAS 的优雅之处。
+So, by randomly sampling about \$73\$ cells, a sampling node can detect with more than \$99.9999999%\$ confidence whether 25% of the matrix has been corrupted. This required sample size is constant—it does not depend on the size of the dataset. This constant complexity is one of the elegant properties of DAS.
 
-### 线性扩展
+### Linearity of Extension
 
-2D 扩展带来一个很有意思的问题，我们有两种不同的步骤扩展矩阵。一种是首先在行方向上扩展，之后再进行列方向扩展；另一种是首先在列方向上扩展，之后在行方向上扩展。那么，两次经过二次扩展的数据是否是相同的？
+2D extension raises an interesting question. There are two ways to perform the extension:
 
-[图：两种不同的扩展步骤]
+1. First extend rows, then extend columns.
+2. First extend columns, then extend rows.
 
-在直觉上它们应该是相等的，这似乎并不是什么问题。实际上，他们确实是相等的，这源于我们的扩展方式是线性的。不仅如此，KZG 的承诺和见证本身也可以理解为一种线性扩展。这很容易通过二维扩展或矩阵特性来证明这一点，但为了避免引入新的概念，我们仅仅使用简单拉格朗日插值来证明。
+Are the final matrices from both approaches the same?
 
-格朗日插值的核心为，给定一组 $x_0, ..., x_{m-1}$，对函数值 $f_0, ..., f_{m-1}$ 的插值，在点 $x$ 上的值为：
+\[Intuition illustration: two extension orders]
+
+Intuitively, they should be equal—and indeed they are. This is due to the linearity of the extension. In fact, KZG commitments and proofs can also be viewed as a form of linear extension. While this can be proven via matrix theory or multidimensional interpolation, we can illustrate it here using simple Lagrange interpolation.
+
+The key idea is this: given a set of \$x\_0, ..., x\_{m-1}\$ and corresponding values \$f\_0, ..., f\_{m-1}\$, the Lagrange interpolation at \$x\$ is:
 
 $$
 I(x) = \sum_{j=0}^{m-1} f_j \cdot \ell_j(x)
-\quad 
 $$
 
-其中：
+where the Lagrange basis polynomials are:
 
 $$
 \ell_j(x) = \prod_{k \ne j} \frac{x - x_k}{x_j - x_k}
 $$
 
-我们先对列插值，再对行插值。每一行第 $i$ 行为 $f_i(x) = \sum_{j=0}^{m-1} a_{i,j} \cdot \ell_j(x)$，插值结果为 $r_i = f_i(x')$ 。然后对这些 $r_i$ 进行 $y$ 上插值：
+Now consider interpolating in two different orders.
+
+First, interpolate columns, then rows:
+
+$$
+f_i(x) = \sum_{j=0}^{m-1} a_{i,j} \cdot \ell_j(x)
+\quad \Rightarrow \quad
+r_i = f_i(x')
+$$
+
+Then interpolate the \$r\_i\$ values along \$y\$:
 
 $$
 a^{(1)}_{i',j'} = \sum_{i=0}^{n-1} \left( \sum_{j=0}^{m-1} a_{i,j} \cdot \ell_j(x') \right) \cdot L_i(y')
 $$
 
-另一种方式是先对行插值，每一列第 $j$ 列为 $g_j(y) = \sum_{i=0}^{n-1} a_{i,j} \cdot L_i(y)$，插值结果为 $c_j = g_j(y')$
+Alternatively, first interpolate rows, then columns:
 
-然后对这些 $c_j$ 在 $x$ 上插值：
+$$
+g_j(y) = \sum_{i=0}^{n-1} a_{i,j} \cdot L_i(y)
+\quad \Rightarrow \quad
+c_j = g_j(y')
+$$
+
+Then interpolate \$c\_j\$ along \$x\$:
 
 $$
 a^{(2)}_{i',j'} = \sum_{j=0}^{m-1} \left( \sum_{i=0}^{n-1} a_{i,j} \cdot L_i(y') \right) \cdot \ell_j(x')
 $$
 
-现在简化符号并比较两种结果：
+Now compare the two results:
 
 $$
 \sum_{i=0}^{n-1} \sum_{j=0}^{m-1} a_{i,j} \cdot \ell_j(x') \cdot L_i(y')
-$$
-
-和：
-
-$$
+\quad \text{vs.} \quad
 \sum_{j=0}^{m-1} \sum_{i=0}^{n-1} a_{i,j} \cdot L_i(y') \cdot \ell_j(x')
 $$
 
-不难发现，实际上它们是相同的，因为无论 $\sum \sum$ 表示的求和，还是 $L_i(y') \cdot \ell_j(x')$ 都是可交换的。虽然在实际应用中我们使用 FFT ，而并非拉格拉日插值，但结果都是一样的，因为都是线性的。
+Clearly, the expressions are equivalent due to the commutativity of summation and multiplication. While FFT-based methods are used in practice instead of Lagrange interpolation, the results are identical due to linearity.
 
-## 1.5D 扩展
+## 1.5D Extension
 
-除了 2D 和 1D 扩展，还有一些被称为 1.5D 的扩展机制。例如在行方向扩展，并同时在行方向和列方向上使用多项式承诺，它们也带来一些有趣的特性。
+![image.png](/en/1_5d.png)
+
+In addition to 1D and 2D, there are hybrid approaches referred to as “1.5D” extensions. For example, the data may be extended only in the row direction, but polynomial commitments are applied in both row and column directions. These methods offer interesting trade-offs and are being actively explored.
