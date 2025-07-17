@@ -1,48 +1,79 @@
-在一个去中心化的网络中，我们如何让成千上万的节点互相找到彼此、保存和查找数据？DHT（Distributed Hash Table，分布式哈希表）正是为了解决这个问题而设计的。
 
-## 基本原理
+# Distributed Hash Table (DHT)
 
-DHT 按照节点间距离来组织网络，节点重点维护那些与自己更近的节点，越远的节点则维护得越少。文件同样被保存在与其本身更近的节点中，在查找和发送文件时只需要逐步找到这些节点。正是因为采用了这种距离机制，使得网络更具弹性。
+In a decentralized network, there are three fundamental problems to solve:
+How do nodes efficiently discover one another?
+Where should data be stored?
+And when a user requests a piece of data, how can the network respond quickly?
+DHT (Distributed Hash Table) was designed to address these exact challenges. It allows every node in the network to both store data conveniently and locate any data with high efficiency, regardless of the network size—achieving fast lookups even at large scale.
 
-### XOR 距离
+## Core Principles
 
-这里的距离并非物理或地理的距离，而是逻辑距离，被称为XOR 距离。无论文件还是节点，都被编码一个唯一的 ID （通常为 Hash），它们可以被表示为二进制串，比如 256 位置。XOR 是一种按位操作规则，两个二进制位，如果相同结果是 0，如果不同结果是 1。例如节点 A 的 ID 为10110011，节点 B 的 ID: 11001011，XOR(A, B): 01111000 。这实际上表示两个 ID 有多相似。
+DHT organizes nodes in the network based on a notion of logical distance. Each node primarily maintains connections to those closer to itself (by ID), while maintaining fewer connections to more distant nodes. Similarly, data is stored on nodes whose IDs are close to the data's ID. When a file is queried or transmitted, nodes can progressively route the request toward the closest match.
+This structure allows each part of the network to scale adaptively. No matter how large the network becomes, data can still be located efficiently within a limited number of hops.
 
-### 路由表和 k-bucket
+### XOR Distance
 
-每个节点都保存着一张“路由表”，记录着它认识的一些其他节点。当然，在一个大型网络中，我们无法保存所有节点并保证其都是活跃的。因此，路由表采用层次化的结构，被称为 k-bucket 。
+In DHT, distance is not geographic but logical, calculated using the XOR operation. Every node and piece of data is assigned a unique ID (usually via hashing), which can be represented as a 256-bit binary number.
+To compute the distance between two IDs, XOR them bit-by-bit: matching bits yield 0, differing bits yield 1. The resulting binary value represents the XOR distance. For example:
 
-[图： 层级 k-bucket]
+* Node A ID: 10110011
+* Node B ID: 11001011
+* A XOR B = 01111000
 
-假设我们用 8 位二进制表示 ID，那么每一层就代表一段“XOR 距离范围”。第 1 层是和我 XOR 距离在 $2^0$ 到 $2^1$ 之间的节点，第 2 层是 $2^1$ 到 $2^2$ ，依此类推。每一层最多只记录 k 个节点（比如 k=16），以保持表的紧凑。不难发现，层级越高，则该 k-bucket 的密钥空间则越大，也就是说该距离范围内的节点越多。
+A smaller XOR result means the two IDs are closer. DHT uses this distance metric to organize nodes and assign data responsibility.
 
-### 数据查找
+### Routing Table and k-bucket
 
-在向网络上传或下载数据时，首先需要找到应当保存该数据的节点。通过数据的 ID 来查找与其最近的 k-bucket，并向其中的节点发起查询请求。节点在收到查询请求后，从本地的 k-bucket 中查找到更近的节点，并将其返回。我们再次发送请求这些更近的节点，直到找到数据存放的节点。
-这中一种迭代式最近邻查找算法：节点递归地将查询请求转发给与目标更接近的节点，直到找到目标节点或数据存储节点。其查找复杂度为 $O(\log n)$，具备非常好的可扩展性。
+Each node maintains a routing table recording the peers it knows. Since a full list of all nodes would be too large, the table is structured hierarchically into **k-buckets**.
 
-## 缺点
+![image.png](/en/k-bucket.png)
 
-DHT 具有对数级别的复杂度，能够弹性地适应大规模的网络。并且，可以通过调整文件副本的数量（复制率）来自适应网络规模的增长。当网络规模越大时，网络的数据吞吐量也会越高，这非常适合 DAS 网络。然而，DHT 由于其天然的一些特性，使得其在 DAS 中应用扔存在巨大挑战。
+Assuming IDs are 8-bit binary values, each level of the table corresponds to a range of XOR distances.
 
-### 密钥空间攻击
+* The first level holds nodes with XOR distance in the range \$2^0\$ to \$2^1\$,
+* The second level covers \$2^1\$ to \$2^2\$, and so on.
+  Each k-bucket stores at most \$k\$ nodes to keep the table compact.
+  As you go to higher levels, the XOR distance covered increases, so those buckets may contain more diverse and distant peers.
 
-攻击者通过大量女巫节点来填充诚实节点的路由表，使得数据被保存在女巫节点中。在采样完成后，女巫节点隐藏数据，这将导致被系统认为可用的数据丢失。密钥空间攻击和防御的成本十分不对等，因为攻击者可以将女巫节点分布在特定的密钥空间子集中。
+### Data Lookup
 
-[图：针对子集的攻击]
+When you upload or download a piece of data, the system first calculates the target ID where the data should reside. Then, from the local routing table, it selects the nodes closest to that ID and sends them a lookup request.
+These peers, in turn, return nodes that are even closer to the target ID, and the process continues iteratively until the node storing the data is found.
 
-有一种可行的防御措施是验证链上身份，使用 ENS 或者少量的质押，从而增加攻击成本，不过攻击成本相对于整体链的安全性仍然非常小。
+This process is essentially a nearest-neighbor iterative search, progressively approaching the target.
+The overall lookup complexity is $O(\log n)$, making it scalable even in networks with thousands of nodes.
 
-### 路径劫持攻击
+## Application Challenges
 
-DHT 每次查找时，都会向数个节点发起查询请求以获得更短路径，但有研究表明这些路径最终都会指向相同的少数节点。这些节点如果是攻击者控制的女巫节点，则可以轻易地阻断查询。如果这在采样完成之后发生，同样可以使得可用性数据不可用。
+Due to its flexibility, adaptiveness, and efficient lookup capability, DHT was once considered an ideal candidate for node discovery and data dissemination in DAS systems. In principle, sampling nodes can query a small number of peers to efficiently locate and retrieve data from a network of thousands. This logarithmic lookup greatly reduces the bandwidth and storage burden of full synchronization, supporting both L1 and L2 scalability.
 
-### 分散难题
+However, real-world experiments and research have shown that DHT introduces a new set of challenges when applied to data availability. Its strengths and limitations become more pronounced under the specific demands of DAS.
 
-虽然 DHT 的查询具备对数复杂度的效率，但在 DAS 应用环境下，数据需要在极短的时间内分发到目标节点，这将带来巨大的查询数量，这种大量并发查询极大限制了 DHT 的分发效率。有研究表明，即时在数据量很小的情况下，也需要数分钟时间。
+### Amplified Security Threats
 
-但如果分发者具有全局路由，将不需要经过查找的步骤直接分发数据。这要求一个资源强大的分发者，在 PBS 语境下在某种程度上是被允许的。另外，这里的分发者可能不仅仅指构建者/验证者，也可能是一种类似 Mevbot 的网络。
+While DHT offers high data availability through dynamic routing, its trustless nature makes it vulnerable to Sybil attacks. In high-value DAS networks, an attacker can inject large numbers of Sybil nodes to fill honest nodes' routing tables. This can isolate sampling requests and lead to permanent data loss.
+Because Sybils can target specific subspaces of the key space, the cost to the attacker is minimal, while the impact on availability is potentially catastrophic.
 
-## 应用
+![image.png](/en/sybil.png)
 
-由于 DHT 的天然不具备抗女巫攻击能力，因此当前并没有直接使用 DHT 来存储可用性数据。DHT 的网络拓扑结构非常适合作为节点发现的机制使用，例如可以直接在网络中搜索特定范围 ID 的节点。
+One possible mitigation is to verify on-chain identities (e.g., via ENS or staking), thereby raising the cost of attack. However, compared to the overall network security budget, this cost may still be too low to act as an effective deterrent.
+
+### Path Predictability and Hijacking
+
+DHT lookups involve querying several nodes for progressively shorter paths. But studies have shown that such routing often converges to a small set of central nodes. If these nodes are controlled by adversaries, they can censor or blackhole lookup requests.
+Even if the sampling phase has already succeeded, such attacks can render data unavailable at the point of verification.
+
+### Distribution Bottleneck
+
+Although DHT provides logarithmic lookup complexity, DAS places extreme pressure on initial data distribution. In DAS, data must be disseminated to custodians in a very short time window. This leads to a large burst of concurrent queries, which DHT is not well-equipped to handle.
+Studies show that even under healthy conditions and small data volumes, full-network propagation via DHT can take minutes—far too long for real-time block validation.
+Moreover, increasing the distributor's resources does not significantly help, since the DHT queries themselves are routed through the distributor’s neighbors.
+
+In theory, a distributor with global routing knowledge could bypass lookup and directly push data to target nodes, but such a design requires a highly provisioned, semi-centralized actor.
+
+## Current Usage and Alternatives
+
+Given the aforementioned challenges and the growing clarity of DAS network requirements, current systems do not use DHT directly for storing availability data.
+Instead, DHT is used for **node discovery and distributed indexing**, where its benefits in routing and scalability remain valuable.
+Despite its limitations, DHT continues to be an important architectural option within the DAS networking stack, and may evolve in hybrid form or in conjunction with verifiable data routing strategies.

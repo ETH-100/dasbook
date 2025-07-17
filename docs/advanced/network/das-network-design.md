@@ -1,11 +1,31 @@
-DAS 有一个非常简单的基本原理：数据发布者发布数据后，采样节点通过采样确认数据可用性，在采样的同时，数据被保存下来。无论数据总量有多大，样本数量总是固定的，因此当采样节点越多，支持的数据量将会越大。而传统的区块链当节点数量越多时，网络吞吐量将会越慢，数据可用性为区块链带来了新的范式。
+# DAS Network Design
 
-然而，理想状态忽略了采样网络的影响，当节点越多、数据量越大时，数据传播、查询将会越来越慢，造成了实际应用中的瓶颈。换句话说，我们如何确保设计一个高效的采样网络并确保活性？
+The core principle of Data Availability Sampling (DAS) is simple: sampling nodes randomly query data holders to verify whether the data is available. In this process, data is not only validated but also distributed and stored across the network. Since the number of samples is fixed and independent of the total data size, the more sampling nodes there are, the more data the network can support overall. This characteristic breaks the traditional bottleneck of full-node synchronization in blockchains and introduces a new scalable paradigm where network capacity no longer limits throughput.
 
-具体一点说，理想状态下的采样只包含了采样一个步骤。由于采样是随机的，没有高效的方式查询这部分数据，这部分数据缺乏活性。因此在实践中我们需要增加一个分散阶段，将数据以可查询的方式存储到网络中。我们简单地抽象出三个必要的部分：
+In practice, however, the initial step—distributing data across the network—reveals the complexities of real-world networking and data propagation. As the number of nodes and the volume of data grow, data dissemination speed and query efficiency become critical performance bottlenecks. The fundamental reasons behind this include:
 
-- 发布：构建者或其他角色，低限度地将数据发布到网络；
-- 保管：保管者确保已经保存需要被保管的数据；
-- 采样：通过采样确认数据可用性；
+* Sampling is inherently random and lacks a structured query mechanism;
+* Node-to-node propagation often relies on broadcast or flooding protocols, which are inefficient;
+* Data transfer fails to fully utilize the entropy capacity of network bandwidth, leading to excessive redundancy and low information density.
 
-保管者被要求保管特定的数据，从而需要从网络中获得数据，同时也按照互惠互利原则向其他人提供数据。这个机制建立了一定的数据查询方式，来保证数据活性。活性取决于
+From an information-theoretic perspective, traditional propagation methods fall short of achieving the network’s optimal transmission rate. Linear network coding provides a theoretical insight: by transmitting linear combinations of data blocks, each transmission carries more entropy, reducing the total number of communication rounds and bandwidth consumption. This inspires more efficient designs for data scheduling and redundancy elimination.
+
+In current implementations, data is stored in the network in a query-friendly manner, while coordination among nodes ensures timely exchange. The entire process can be abstracted into three essential components:
+
+* **Distribute**: Data is initially seeded to the network by builders or other actors;
+* **Custody**: Some nodes take responsibility for storing a portion of the data;
+* **Sample**: Sampling nodes retrieve specific data pieces from the network to validate availability.
+
+In this setup, custodians are not merely passive recipients of data—they are also active contributors to network liveness. To fulfill their custody responsibilities, they must proactively fetch data from the network and respond to incoming sampling requests. This reciprocal structure forms the foundation of a live and responsive network.
+
+To achieve an efficient “Distribute–Custody–Sample” pipeline, the network layer must satisfy two core capabilities:
+
+1. **Rapid dissemination**: When data is first published, it must be quickly propagated to multiple candidate custodians across the network;
+2. **Efficient query resolution**: Given a data identifier, sampling nodes must be able to locate and request the corresponding data fragment with low latency.
+
+To support these goals, two types of networking protocols are especially relevant:
+
+* **Gossip protocols**: These offer robust broadcast capabilities and perform well in lossy environments by rapidly disseminating data;
+* **DHT protocols**: These build a queryable key-value structure that enables efficient data lookup in sparse networks.
+
+However, neither of these protocols was originally designed for DAS, and each has limitations in certain scenarios. It is thus necessary to explore their design principles, adaptation strategies, and how they might be used in tandem to meet the unique demands of DAS systems.

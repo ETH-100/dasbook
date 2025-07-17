@@ -1,31 +1,53 @@
-Gossip 是一种灵感来源于“谣言传播”的协议机制，在去中心化网络中被广泛用来快速传播消息。在 DAS 网络中，Gossip 协议常被用于数据块的分发、采样信息的通告等高频低延迟传播场景。
+# Gossip Protocol and GossipSub
 
-## 基本原理
+If you want to deliver a message to thousands of nodes in a very short time, the most direct approach is to broadcast it to all your known peers—and let each of them do the same. This resembles how rumors spread in human society, which is precisely what the Gossip protocol models. While traditional DHTs provide a well-structured querying mechanism, they fall short in broadcast performance—especially in time-sensitive and reliability-critical scenarios like Data Availability Sampling (DAS).
 
-与 DHT 通过查找来向特定目标节点请求不同，Gossip 更像是一种主动广播：每个节点收到一条消息后，会传播给邻居节点，逐步让整个网络都知晓。消息发送方并不关心目标节点是否成功接受，也不关心对方已拥有哪些信息，这种静默状态避免了状反馈响应带来的消息爆炸。由于目标节点有多个邻居节点，这确保了总是能可靠地接受到消息，但这种机制也带来大量的消息冗余。在全连接网络中进行全量传播的复杂度为 $O(n^2)$，其中 $n$ 为节点数量。虽然全量传播的速度非常快，但资源消耗过大，因此 Gossip 中有一个很重要的机制：在节点收到消息后，从邻居节点中随机选取一部分进行传播。
+However, this kind of rapid diffusion comes at a cost. Traditional Gossip is unstructured, highly redundant, and leads to significant bandwidth waste and an uncontrollable topology. To retain its speed while introducing more structure and efficiency, we need a more organized overlay. And this is where GossipSub comes in.
 
-### Fanout
+GossipSub is a publish-subscribe (pub/sub) protocol. You can think of it as a structured gossip network: each node subscribes only to topics it is interested in and connects to a small set of peers that share the same interest. This subnet-style topology maps naturally to the row/column layout of DAS data and enables efficient data propagation.
 
-这个随机传播的关键参数为 fanout，它表示一个节点将消息转发给多少个邻居。例如 fanout = 3，表示节点只向其中 3 个邻居传播该消息。Fanout 越大，消息传播得越快，覆盖率也越高，但会造成带宽浪费；Fanout 越小，节省带宽，但可能出现消息传播中断或延迟。通常，fanout 取值与网络规模有关，一个常见的经验取值为 $\log(n)$，其中 $n$ 是节点总数。在实践中，还有根据节点的带宽、延迟、邻居数量、拥堵程度等实时调整的实现。
+In current DAS networks, GossipSub has become the primary communication protocol.
 
-为了避免消息被一直传播下去，导致没必要的资源消耗或陷入死循环，我们同时还需要一个终止策略。TTL 限制（Time-To-Live）是一种常见的终止策略，每条消息携带一个“生存时间”字段，比如最多转发 5 次。每转发一次，TTL -1；TTL=0 时，节点就不再转发。
+## Network Structure
 
-### **Publish/Subscribe**
+![image.png](/en/gossipsub-network.png)
 
-在实践中，节点通常对特定的主题感兴趣，例如“最新的区块”、“当前终结的区块”等等，而有些节点对这些主题并不感兴趣。Pub/Sub机制通过主题订阅机制，将对相同主题感兴趣的节点联系在一起，形成子网，特定主题只在该子网中传播。在 gossipsub 中，这种参与 Pub/Sub 同一个 topic 的一组节点，它们之间组成一个稀疏的对等网络被称为 mesh ，节点之间使用 **full-message peerings** 传播完整数据。
+### Mesh Network
 
-### 控制消息
+Nodes that subscribe to a particular topic discover and connect to others who have subscribed to the same topic. These nodes form the **mesh** for that topic. When a node publishes a message, it only needs to send it to a few of its peers, who then forward it to their peers, and so on—allowing for low-cost propagation within the mesh.
 
-Gossipsub 协议是一种混合式 Gossip 协议，它结合了 push gossip、Full-message mesh 以及声誉系统，通过控制机制进一步地进行流量调控和拓扑管理。
+Each node maintains only a small number of connections yet achieves broad message coverage. To keep these meshes healthy and adaptive, GossipSub employs a periodic heartbeat mechanism that automatically performs `GRAFT` (adding missing connections) and `PRUNE` (removing excess peers), ensuring propagation paths remain stable and responsive.
 
-这些控制机制通过控制消息来实现，主要包括 GRAFT 、PRUNE、IHAVE、IWANT 以及 IDONTWANT 。其中 GRAFT 用于接受方将发送方添加到相应的 mesh 中；PRUNE 是最重要的“拓扑自我修剪机制”，用于调整 mesh 中的邻居列表。
+This mesh forms a **full-message** network: the messages exchanged between peers contain full message content, not just metadata.
 
-IHAVE 是一个轻量级的通告，用于告诉邻居“我有某条消息”，邻居节点判断自己是否缺失其中某些消息，如果需要，则向其发起请求。在 DAS 应用中，在节点拥有某个数据后，通知网络数据的元数据。
+### Metadata-only Network
 
-IDONTWANT 是新版本中控制冗余的关键，用于向邻居表达：我不需要某些数据，请别向我发送相关消息，这将大幅减少消息冗余。IDONTWANT 在应用中的能力仍在探索中。
+From a global perspective, different subnets (meshes) still need to communicate. In addition to full-message communication, each node also maintains a **metadata-only** overlay network. These connections do not transmit message payloads; instead, they exchange lightweight control messages:
 
-## 应用
+* `IHAVE`: notifies neighbors that the sender has certain messages;
+* `IWANT`: requests specific messages that the recipient lacks;
+* `IDONTWANT`: declares that certain messages are not desired, preventing redundant transmission.
 
-因为 Gossip 协议具有优秀的传播速度和系统鲁棒性，并且可以通过实际协议中的控制机制设计来减少资源消耗，在 DAS 中具有广泛应用。数据按照列/行划分为子网，通过 IHAVE 来通知数据状态，再使用请求响应的模式传输数据，另外，IDONTWANT 等机制可以进一步地降低消耗。
+This control plane becomes crucial under heavy load or in unreliable network conditions. It ensures that nodes can recover from missed messages while conserving bandwidth and maintaining robustness.
 
-但建立在 Gossip 之上的 DAS 玩过，依赖于水平子网来实现。当网络足够分散，每个节点需要存储的数据量变得更小，且不依赖于高资源节点，那么我们将需要足够多的子网。而增加子网的同时，为了能快速获得不同位置的数据，节点需要维护的邻居将会线性增加，这是基于 Gossip 建立 DAS 网络的局限性。相反，DHT 并不存在这个问题。
+### Fan-out
+
+In some cases, a node may need to send a full message to a topic it hasn’t subscribed to. For instance, if a node samples a piece of data but isn’t responsible for storing it, it still needs to publish that data fragment. GossipSub accommodates this through the **fanout peers** mechanism:
+
+* When a node publishes to an unsubscribed topic for the first time, it randomly selects a few peers subscribed to that topic as fanout peers;
+* The message is forwarded to those peers, who then propagate it through the mesh;
+* Fanout peers are ephemeral. If the node stops sending messages to that topic for a short period (e.g., two minutes), the fanout group is automatically discarded.
+
+To further prevent flooding, each message typically carries a **Time-To-Live (TTL)** field. For example, TTL = 5 means the message may be propagated at most five times, with the counter decreasing on each hop.
+
+## DAS Applications
+
+In DAS systems, block data is encoded into a two-dimensional matrix, where each row or column corresponds to a logical **topic**. Data publishers broadcast fragments by rows or columns to the respective topics.
+
+Each node, depending on its **custody** responsibilities, subscribes to the relevant topics and joins the corresponding mesh networks to receive and exchange data. After data is published:
+
+* Nodes use `IHAVE` to announce which fragments they possess;
+* Peers request missing fragments using `IWANT`;
+* If a node is uninterested in a message or already has it, it can send `IDONTWANT` to suppress further delivery, saving bandwidth.
+
+These mechanisms ensure that DAS networks can achieve both completeness in sampling and efficiency in data dissemination—making GossipSub an ideal protocol for this environment.
