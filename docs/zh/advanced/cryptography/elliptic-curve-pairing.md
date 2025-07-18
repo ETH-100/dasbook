@@ -1,18 +1,4 @@
-<!--
- Copyright 2025 ZeroDAO
- 
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
- 
-     https://www.apache.org/licenses/LICENSE-2.0
- 
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
--->
+# 椭圆曲线配对
 
 虽然 Schnorr 可以原生地支持多重签名，但需要成员之间多轮协商，这不仅增加了通信成本，并且非常不利于在复杂的应用环境中应用。Schnorr 之所以需要多轮签名，是因为虽然它是结构对称的，但仍然依赖于随机数生成，我们能不能寻找到一种完全对称的数学结构？
 

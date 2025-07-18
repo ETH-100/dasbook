@@ -1,160 +1,181 @@
-## ECDH 密钥协商
 
-现在我们有了一对私钥和公钥，别人无法通过公钥反推出私钥。这似乎还做不了什么，我们大可以通过私钥加密消息，但接收方如何通过你的公钥解密，或者验证未被篡改？如果你和接收方拥有同一对密钥，就可以通过私钥解密消息了。
 
-ECDH 就是这样一种密钥协商算法，通过交换各自的公钥来安全地计算共同密钥对。$Alice$ 想要向 $Bob$ 发送一段消息，但是不希望被别人截获，我们需要对消息进行加密并且 $Bob$ 可以解密。 $Alice$ 显然不能直接将私钥发送给 $Bob$ ，但他们可以相互发送公钥，从而计算出一个共同密钥。流程如下：
+# Applications of Elliptic Curves
 
-1. $Alice$  选取自己的私钥 $a$，计算出公钥 $A = aG$
-2. $Bob$  选取自己的私钥 $b$，计算出公钥  $B=bG$
-3. $Alice$ 将公钥  $A$ 发送给 $Bob$，$Bob$ 将公钥 $B$ 发送给 $A$
-4. $Alice$  计算共同密钥 $K = aB$，$Bob$ 计算共同公钥 $K = bA$，因为 $aB = a(bG) = b(aG) = bA$，他们计算出的共同密钥是相同的
+## ECDH Key Exchange
 
-自此 $Alice$ 和 $Bob$ 拥有了相同的一组私钥和公钥，于是可以轻松地使用一些加密算法来共享秘密信息 $S$ 。在 TLS 中，引入了 ECDHA ，采用相同的原理生成临时密钥，使得客户端和服务器之间可以安全地传输数据。
+We now have a pair of private and public keys, and others cannot derive the private key from the public key. But that alone isn’t very useful—while you could encrypt a message with your private key, how would the recipient decrypt it or verify that it hasn’t been tampered with?
 
-## **ECDSA 签名**
+If you and the recipient share the same key pair, the private key can be used to decrypt the message.
 
-ECDH 本质上是利用了椭圆曲线标量乘法的可交换性，它很有用，但需要双方交换密钥才能成功。如果 $Alice$ 向所有人公开了一条消息，并且需要向所有人证明这条消息确实是自己公开的。此时，所有人都成了 $Bob$ ，我们没有办法进行密钥协商。这时，你也许会想到，如果我们为所有人生成一对公共密钥，但是没有人知道私钥，并且在验证过程中消除私钥需求就可以了。
+**ECDH (Elliptic Curve Diffie-Hellman)** is a key exchange algorithm that allows two parties to compute a shared key pair securely by exchanging public keys. Suppose Alice wants to send a message to Bob without it being intercepted. The message needs to be encrypted, and only Bob should be able to decrypt it. Alice obviously cannot send her private key to Bob directly, but they can exchange public keys to compute a shared secret key.
 
-这就是 ECDSA 签名的核心逻辑，首先，我们生成一对临时公共密钥：
+![image.png](/en/ecdh.png)
 
-1. 私钥 $k$: 选取随机数 $k$，$0<k<n$
-2. 公钥： $P=kG$
+1. Alice chooses her private key $a$ and computes her public key $A = aG$
+2. Bob chooses his private key $b$ and computes his public key $B = bG$
+3. Alice sends $A$ to Bob, and Bob sends $B$ to Alice
+4. Alice computes the shared key $K = aB$, and Bob computes $K = bA$. Since $aB = a(bG) = b(aG) = bA$, the shared key $K$ is identical for both
 
-$Alice$ 的私钥是 $d_A$ ，对应的公钥为 $H_A$ 。我们只需要验证消息而非解密，因此只需要对消息进行哈希，因为太长我们去掉一小部分最终形成 $z$ 。$Alice$ 为了绑定消息和私钥，同时也是为了隐藏私钥，我们将 $z$ 和私钥 $h$ 相加： $z + d_A$ 。为了消除掉随机生成的 $k$ ，直觉上需要做一点除法，我们最终构造了：
+From then on, Alice and Bob can use this shared key to encrypt and decrypt secret information $S$. In TLS, a variation called **ECDHE** is used to generate **ephemeral keys**, enabling secure communication between clients and servers.
 
-$$
-s=(z+d_A)k^{-1}
-$$
+## ECDSA Signature
 
-$Alice$ 只需要公开这个 $s$ ，自己的公钥 $H_A$，消息哈希 $z$ 即可。所有人都可以通过以下计算验证签名是否正确：
+ECDH relies on the **commutativity** of elliptic curve scalar multiplication. It’s useful, but requires both parties to exchange keys. Suppose Alice publicly announces a message and wants to **prove to everyone** that the message truly came from her. In this case, everyone is a “Bob,” and key exchange isn’t feasible.
 
-$$
-P=s^{-1}zG+s^{-1}H_A
-$$
+You might imagine that we can generate a **public key pair** for everyone, such that no one knows the private key, and the verification process doesn’t require the private key at all.
 
-我们将 $H_A=d_AG$ 代入，并作一点变换就可以验证有效性：
+This is the core idea behind **ECDSA (Elliptic Curve Digital Signature Algorithm)**.
 
-$$
-s^{-1}zG+s^{-1}H_A=s^{-1}zG+s^{-1}Gd_A=G(z+d_A)s^{-1}=Gk(z+d_A)k^{-1}s^{-1}
-$$
+We first generate a temporary key pair:
 
-根据 $s$ 的定义，我们得到：
+1. **Private key $k$**: Select a random number $k$ such that $0 < k < n$
+2. **Public key**: $P = kG$
+
+Alice's long-term private key is $d_A$, with corresponding public key $H_A$. Since we’re only verifying the message, not decrypting it, we hash the message and truncate it to form $z$. To bind the message to the private key while hiding the private key, we add $z + d_A$.
+
+To eliminate $k$, we intuitively need a division step, leading to:
 
 $$
-kGss^{-1}=kG=P
+s = (z + d_A)k^{-1}
 $$
 
-恭喜你，你发明了 ECDSA 算法。 目前它在结构上是自洽的，但还是不安全，因为签名可以被伪造。攻击者想要伪造某个用户的签名，已知：
-
-- 公钥 $H_A = d_A G$（公开）
-- 消息哈希 $z$
-- 签名只包含 $s$
-
-他尝试自己构造一个签名 $s'$，让验证通过：
+Alice publishes $s$, her public key $H_A$, and the hash $z$. Anyone can verify the signature via:
 
 $$
-P = s'^{-1} z G + s'^{-1} H_A
+P = s^{-1}zG + s^{-1}H_A
 $$
 
-我们可以因式分解这个：
+Substituting $H_A = d_A G$, we verify:
 
 $$
-P = s'^{-1}(z G + H_A)
+s^{-1}zG + s^{-1}H_A = s^{-1}zG + s^{-1}d_A G = G(z + d_A)s^{-1} = Gk(z + d_A)k^{-1}s^{-1}
 $$
 
-然后攻击者只需要自己选一个 $s'$，再算出：
+Since:
 
 $$
-P = s'^{-1}(z G + H_A) \Rightarrow P = kG
+s = k^{-1}(z + d_A)
 $$
 
-这没什么难的 —— 他可以反过来直接设定 $s'$，算出对应的 $P$，就构造出了一个“合法”的签名。为此，我们需要为 $s$ 引入一下随机值 $r$ ：
+Then:
 
 $$
-r=P.x \mod n
+kGss^{-1} = kG = P
 $$
 
-即点 $P$ 的 $x$ 坐标模 $n$ ，并且需要确保不为 $0$。 $r$ 的选择还有其他考量，我们稍后再展开。新的 $s$ 为：
+Congratulations—you’ve just invented ECDSA. However, this version is insecure because the signature can be forged. An attacker could:
+
+* Know the public key $H_A = d_A G$
+* Know the message hash $z$
+* See the signature $s$
+
+Then forge a signature $s'$ such that:
 
 $$
-k^{-1}(z+rd_A) 
+P = s'^{-1}zG + s'^{-1}H_A = s'^{-1}(zG + H_A)
 $$
 
-最终完整的签名流程：
-
-1. $k$: 选取随机数 $k$，$0<k<n$
-2. $P$ 的计算： $P=kG$
-3. $r$ 的计算： $r=P.x \mod n$ 即点 $P$ 的 $x$ 坐标模 $n$
-    1. 如 $r = 0$，则回到第一步
-4. $s$ 的计算： $k^{-1}(z+rd_A)$ ，$z$ 为签名消息安全哈希后的截取
-    1. 如 $s=0$，则回到第一步
-
-验证的计算：
-
-1. $u_1$ 的计算：$s^{-1}z \mod n$
-2. $u_2$ 的计算： $s^{-1}r \mod n$
-3. 验证 $P=u_1G + u_2H_A$ , $H_A$ 为签名者公钥
-
-有效性验证：根据 $u_1$ 和 $u_2$ 的定义，以及公钥 $H_A = d_AG$，代入 $u_1G + u_2H_A$
+The attacker can choose any $s'$ and compute $P$ accordingly. This results in a “valid” looking signature. To prevent this, we introduce a **random value $r$**:
 
 $$
-u_1G + u_2H_A = s^{-1}zG + s^{-1}rd_AG = s^{-1}(z+rd_A)G = s^{-1}(z+rd_A)k^{-1}kG
+r = P.x \mod n
 $$
 
-根据 $s$  的定义 $s = k^{-1}(z+rd_A)$ 得 
+That is, we use the x-coordinate of $P$, modulo $n$, and ensure it’s not zero. There are other considerations around choosing $r$ (discussed later). The new $s$ becomes:
 
 $$
-s^{-1}(z+rd_A)k^{-1}kG = s^{-1}skG = kG = P
+s = k^{-1}(z + r d_A)
 $$
 
-## **Schnorr 签名**
+### Final ECDSA Signing Steps:
 
-也许你对 $r$ 的引入耿耿于怀：为什么我们要从一个点中截取 $x$ 坐标？是否可以用更简单、对称的方式来构造签名？Schnorr 签名就是这样一种更优雅的方案，在理论上比 ECDSA 更优雅，在安全性上也更容易形式化证明。
+1. Choose random $k$, $0 < k < n$
+2. Compute $P = kG$
+3. Compute $r = P.x \mod n$
 
-Schnorr 的核心思想是：我们不再从椭圆曲线点中提取坐标，而是直接把这个点参与到哈希函数的输入中，构造一个“挑战值” $e$，并用它来结合消息与私钥。流程如下：
+   * If $r = 0$, restart
+4. Compute $s = k^{-1}(z + r d_A)$
 
-**签名：**
+   * If $s = 0$, restart
 
-$Alice$ 拥有私钥 $d_A$，公钥 $H_A = d_A G$，她希望对消息 $m$ 进行签名。
+### Signature Verification:
 
-1. 选取随机数 $k$，计算承诺点 $R = kG$
-2. 计算挑战值： $e = \text{Hash}(R \parallel m)$
-3. 计算响应值： $s = k + ed_A$
+1. Compute $u_1 = s^{-1}z \mod n$
+2. Compute $u_2 = s^{-1}r \mod n$
+3. Check $P = u_1G + u_2H_A$
 
-签名结果是二元组 $(R, s)$， $R$ 是点， $s$ 是整数。
-
-**验证：**
-
-任何人拥有 $Alice$ 的公钥 $H_A$ 和消息 $m$，验证方式如下：
-
-1. 重新计算挑战值： $e = \text{Hash}(R \parallel m)$
-2. 验证是否成立： $sG \stackrel{?}{=} R + eH_A$
-
-**有效性分析：**
-
-我们来验证上式是否成立：
+Verification proof:
 
 $$
-sG = (k + ed_A)G = kG + ed_A G = R + eH_A
+u_1G + u_2H_A = s^{-1}zG + s^{-1}r d_A G = s^{-1}(z + r d_A) G = s^{-1}(z + r d_A)k^{-1}kG
 $$
 
-验证通过。
+Since $s = k^{-1}(z + r d_A)$:
 
-相比其他签名算法，Schnorr 的优雅性使它具有非常多的优势。它天然支持多重签名、分布式密钥生成，原理大致与 ECDH 密钥协商类似。不同的是 Schnorr 使用加法： 每个参与方首先使用各自的公钥相加生成联合公钥 $H$ （实际应用中需要加权，以防止 Rogue Key 攻击），之后生成各自的承诺 $R_i$ 、响应 $s_i$ ，所有片段加起来聚合生成最终的 $R$ 和 $s$ ，挑战为 $e = \text{Hash}(R \parallel H \parallel m)$ 。验证者验证 $sG \stackrel{?}{=} R + eH$ ，这里与单个签名相同。
+$$
+s^{-1}(z + r d_A)k^{-1}kG = s^{-1}s kG = kG = P
+$$
 
-Schnorr 签名因其结构对称、聚合能力强，并且安全性易于证明，但它申请了专利，因此多年来并没有得到更为广泛的应用，直到 2008 年专利才失效。Bitcoin Taproot 升级开始引入了 Schnorr 签名，以允许聚合签名以及其他更为丰富的功能。
+## Schnorr Signature
 
-与 ECDSA 相比，虽然 Schnorr 有一个劣势是具有可恢复性，即无法直接通过签名恢复签名者公钥。
+You may wonder why $r$ must be extracted from the x-coordinate. Couldn’t we use a more **symmetric and elegant** method?
 
-ECDSA 的签名是一个二元组 $(r, s)$：
+That’s exactly what **Schnorr signatures** aim for—more elegant in theory and easier to formally prove secure.
 
-- 签名中的 $r$ 是从点 $R = kG$ 的 $x$ **坐标截断得来**，即 $r = R.x \mod n$
-- 因为 $r$ 是从某个点 $R$ 派生而来，验证者可以**从** $r$ **倒推出** $R$ **所在的两个可能点**（由于椭圆曲线的对称性， $R$ 与 $-R$ 共享 $x$ 坐标）
-- 给定 $s$、 $r$、消息哈希 $z$ ，验证者可以倒推出签名所使用的公钥 ****$H_A$
+Instead of extracting a coordinate from a point, Schnorr **hashes the point directly** with the message to generate a **challenge value $e$**, combining the message and private key.
 
-于是，有一种扩展版本的签名叫 **ECDSA 可恢复签名（ECDSA-recoverable signature）**，它在原始签名上附加一个 **recovery id**（通常是 0~3 的一个值），用来指示：
+### Signing:
 
-- 所使用的是 $R$ 还是 $-R$
-- 是否处于主子群或倍数子群中（用于判断正确的公钥）
+Alice has private key $d_A$ and public key $H_A = d_A G$, and wants to sign message $m$.
 
-这 2 bit 信息配合 $(r, s)$ 即可恢复出签名者公钥。这就是为什么在以太坊的交易结构中，签名是 $(v, r, s)$，其中的 $v$ 是 recovery id（也可包含链 ID），用于恢复地址。
+1. Select random $k$, compute commitment point $R = kG$
+2. Compute challenge $e = \text{Hash}(R \parallel m)$
+3. Compute response $s = k + e d_A$
+
+Signature is the tuple $(R, s)$.
+
+### Verification:
+
+Given public key $H_A$ and message $m$:
+
+1. Recompute $e = \text{Hash}(R \parallel m)$
+2. Verify: $sG \stackrel{?}{=} R + eH_A$
+
+**Verification:**
+
+$$
+sG = (k + e d_A)G = kG + e d_A G = R + e H_A
+$$
+
+So the signature is valid.
+
+Compared to other signature schemes, Schnorr is elegant and supports:
+
+* **Multisignatures**
+* **Distributed key generation**
+
+The process is similar to ECDH: participants combine public keys into an aggregate public key $H$, generate commitments $R_i$, responses $s_i$, and aggregate to $R$ and $s$. The challenge is $e = \text{Hash}(R \parallel H \parallel m)$, and verification is the same:
+
+$$
+sG \stackrel{?}{=} R + eH
+$$
+
+Schnorr signatures are symmetric, aggregatable, and provably secure. However, they were **patented**, and thus not widely adopted until the patent expired in 2008. Bitcoin introduced Schnorr in the **Taproot upgrade**, enabling signature aggregation and other powerful features.
+
+### Schnorr vs. ECDSA: Recoverability
+
+One downside of Schnorr is that it **doesn’t support signature recovery**.
+
+ECDSA signatures are pairs $(r, s)$:
+
+* $r$ is derived from the x-coordinate of $R = kG$: $r = R.x \mod n$
+* Since $R$ and $-R$ share the same $x$ coordinate, knowing $r$ allows inferring **two possible points** $R$
+* Given $(r, s, z)$, a verifier can **recover** the signer’s public key $H_A$
+
+This leads to **ECDSA-recoverable signatures**, which add a **recovery id** (usually 0–3), indicating:
+
+* Whether the original point was $R$ or $-R$
+* Whether it belongs to a subgroup or its multiple
+
+With these 2 bits and $(r, s)$, the signer’s public key can be reconstructed. That’s why Ethereum signatures are represented as $(v, r, s)$, where $v$ is the recovery id (and may include chain ID), allowing **address recovery**.

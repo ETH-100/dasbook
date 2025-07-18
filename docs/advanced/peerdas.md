@@ -1,46 +1,61 @@
-无论是 Gossip 还是 DHT ，都并非专为 DAS 网络设计的，都有各自不契合之处。Gossip 的子网扩展具有一定局限性，我们不能一直扩展它；DHT 同样存在安全性、分散困难等等问题。在网络层面我们并没有准备好实施一个完整的 Danksharding ，同时客户端也需要逐渐过渡。
 
-PeerDAS 正是这样一种过渡方案，它弥补了 EIP-4844 (Proto-Danksharding)  的不足，不要求节点下载和存储全部 Blob，另一方面也不引入新的网络协议来实现完整的 Danksharding 。PeerDAS 的改进主要体现在以下几方面：
+# PeerDAS
 
-- 使用纠删码扩展 Blob；
-- 采用 Gossip 作为主要 DAS 网络，并案列划分为不同子网；
-- 支持采样；
+**PeerDAS** is a transitional scheme that bridges the limitations of EIP-4844 (Proto-Danksharding). It avoids requiring nodes to download and store full blobs, while also not introducing new network protocols to fully implement Danksharding. Its key improvements include:
 
-## 基本原理
+* Erasure coding to extend blobs
+* Formation of column-based subnets
+* Sampling support
 
-每个节点都需要保管最低限度的数据，例如 2 列。节点保管哪些数据列确定性地通过节点 ID 计算得到，因此任何人都可以确切地知道某个节点应该保管了哪些数据。
+### **Core Principles**
 
-Blobs 被使用纠删码进行扩展，只需要一部分就能恢复完整数据，所需的样本比例取决于实施中采用 1D 还是 2D 扩展。每列/行数据都通过一个相应的子网进行传播，想要该列数据的节点可以订阅相应的子网。
+Each node is required to store a minimal amount of data—e.g., two columns. The specific columns a node must store are deterministically derived from its node ID, meaning anyone can know exactly which data a node should be holding.
 
-由于确切地知道特定节点的保管数据，我们可以在本地维护足够多的多样化节点，从而间接地覆盖所有子网。当需要发起采样时，通过数据坐标逆向查找邻居，并通过 Req/Resp 协议向其发起采样请求。可以把这种直接加入的子网和间接覆盖的子网，理解为垂直和水平方向的两种扩展，它带来了很多优势：
+Blobs are extended using erasure coding so that a full row can be reconstructed from only part of the row. Each column of data is propagated through a corresponding subnet. Nodes interested in specific columns can subscribe to the relevant subnets.
 
-- 重建和交叉播种： 如果节点未获得所需行/列数据，可以获取足够多的相关样本进行重建，并在子网中传播；
-- 加速传播： 节点在采样成功获得数据后，可以传递给没有该数据的节点，从而精准地加速数据传播。
+Since we know deterministically which data a given node is supposed to store, we can locally maintain a diverse enough set of peers to indirectly cover all subnets. When sampling is needed, the node uses the data coordinate to reverse-look up neighbors and initiates sampling via a Req/Resp protocol. You can think of this design as a combination of *vertical* (direct subnet joining) and *horizontal* (indirect subnet coverage) scaling, bringing several benefits:
 
-由于确切性地知道节点应当拥有哪些数据，我们可以据此对节点进行打分，例如未能按时收到数据，将降低评分，但首先需要确认是否因为网络中本身没有数据。通过同样评分我们维护了一组高可用性的邻居。
+* **Recovery and cross-seeding**: If a node misses some row/column data, it can reconstruct it from enough related samples and redistribute the result into the subnet. However, full reconstruction is limited until true 2D extension is implemented, since columns cannot yet be recovered.
+* **Accelerated propagation**: Once a node successfully samples a piece of data, it can forward it to others who don’t have it, accelerating propagation precisely.
 
-## 实施
+Because nodes are expected to hold specific data, we can score them accordingly. If a node fails to publish its expected data in time, its score drops—though we first check whether the data was even present in the network. Based on scores, we maintain a set of high-availability neighbors.
 
-当前 PeerDAS 处于 Fulu 阶段，它可以被理解为 DAS 网络的初始实现。核心目标是构建一个能够支撑最小采样语义、可用性验证和基础传播的系统。
+### **Implementation**
 
-在当前阶段中实现了 1D 的纠删码扩展，并按列映射到 Gossip 子网中。节点按照自身 ID 确定性地被分配若干“保管列”（custody columns）。这种列分配方式是公开、可验证且具确定性的。
+PeerDAS is currently in the **Fulu stage**, which can be understood as the initial implementation of the DAS network. Its core goal is to support minimal sampling semantics, availability verification, and basic data propagation.
 
-除了被分配的列组合（custody group），节点也可以自行选择托管更多列，甚至可以托管全部列，形成超级全节点（super-full node”）。无论托管多少列，节点都必须订阅对应的 Gossip 子网，并在这些子网上发布和监听列数据（DataColumnSidecar）。
+![image.png](/en/peerdas.png)
 
-当节点未能及时获得自己应托管的列时，也可以通过请求-响应协议向其他节点获取缺失的列；而如果一个节点已经拥有一半以上的列，就可以尝试重建整个矩阵，并将重建出的新列重新广播回网络，这被称为交叉播种。只要任意节点能重建数据，就可以反过来增强网络本身的数据完整性，如果金刚狼一样形成自愈式的数据传播能力。
+In this stage, 1D erasure coding is applied, and columns are mapped to subnets. Nodes are deterministically assigned a set of “custody columns” based on their node ID. This assignment is public, verifiable, and deterministic.
 
-此外，此阶段实现了同行评分，利用  custody 分配的确定性，根据每个节点的行为判断其是否履行了职责，从而进行评分。与此同时，节点会根据这些评分维护一组高可用邻居，用于优先进行采样或重建。
+In addition to their assigned custody group, nodes can optionally choose to host more columns—or even all of them—becoming a **super-full node**. Regardless of how many columns a node hosts, it must subscribe to the corresponding subnets and publish/listen for column data (`DataColumnSidecar`) on them.
 
-由于节点并不负责区块中完整的 Blob 数据，因此通过采样确保数据可用性对于当前阶段也是必要的。采样通过获取 8 个数据列来完成，获取途径有子网和同行两种。子网采样需要节点订阅相应的列子网，如果能够成功获得足够的数据，则可以认为该列可用。采样目的获得的列数据，节点没有存储和传播的责任。如果节点托管的列数量不少于 8 ，实际上已经完成了采样，不再需要额外操作。加入子网将带来更大的资源消耗，同行采样避免了这一点，节点随机确定列，并通过 Req/Resp 向其他同行请求数据。
+If a node fails to obtain its custody columns in time, it can use the request-response protocol to fetch the missing columns from others. Furthermore, if a node has collected more than half of the total columns, it can attempt to reconstruct the entire data matrix and rebroadcast the new columns—this is called **cross-seeding**. As long as any node can reconstruct the data, it enhances the integrity of the network, building a self-healing propagation mechanism like Wolverine.
 
-总体来说，该阶段的 PeerDAS 遵循剃刀原理，即以最小的改动，实现相比 Proto-Danksharding Blob 8 倍的提升。未来逐渐过度到 2D 纠删码、更好的单元采样等等，以带来更大的性能拓展。以下是更详细的对比：
+Thanks to the deterministic custody assignments, node behavior can be evaluated to see whether they fulfill their responsibilities. Nodes use these evaluations to maintain a high-quality neighbor set, prioritized for sampling or reconstruction.
 
-| 特性 | EIP-4844 (Proto-Danksharding) | PeerDAS (Fulu 阶段) |
-| --- | --- | --- |
-| **节点职责** | 所有节点下载每个Blob的完整数据 | 每个节点下载由 NodeID 决定的若干数据列 |
-| **最大Blob数/区块** | 最多 6 个 Blob | 最多 48 个 Blob |
-| **纠删码扩展** | 无冗余编码 | 一维( 1D )纠删码扩展（每Blob扩展为两倍数据） |
-| **数据采样机制** | 无抽样机制 | Custody Sampling (节点订阅并验证至少8列cell)  Peer Sampling (节点RPC请求列数据) |
-| **数据恢复能力** | 无恢复能力（任一Blob缺失即不可恢复） | 只需获取50%以上的列即可恢复整个Blob数据 |
-| **协议复杂度** | 较低，仅新增Blob Sidecar机制 | 中等，增加了Gossip子网结构、cell-level proof传输、Req/Resp采样协议 |
-| **攻击容忍性** | 较低，任意Blob数据丢失即失效 | 中等，可容忍少量数据缺失（最高50%） |
+Since nodes don’t store full blob data from blocks, **sampling** remains essential to ensuring data availability at this stage. Sampling is achieved by retrieving 8 data columns, either through the subnets or from peers:
+
+* **Subnet sampling**: Nodes subscribe to subnets and consider a column "available" if enough data is received from it. However, they aren’t responsible for storing or propagating the sampled data.
+* **Peer sampling**: Nodes randomly choose 8 columns and fetch them from other peers via Req/Resp, avoiding the cost of joining subnets.
+
+If a node is already storing 8 or more columns as part of its custody duty, it has effectively completed the sampling process without extra effort.
+
+In short, PeerDAS at this stage delivers up to **8× the blob throughput** of Proto-Danksharding, with minimal protocol changes. Future evolution includes moving to **2D erasure codes**, **cell-level sampling**, and more, unlocking even greater performance. A comparison is shown below:
+
+| Feature                 | EIP-4844 (Proto-Danksharding)       | PeerDAS (Fulu stage)                                     |
+| ----------------------- | ----------------------------------- | -------------------------------------------------------- |
+| **Node responsibility** | All nodes download full blob data   | Each node downloads a few columns based on NodeID        |
+| **Max blobs per block** | Up to 6 blobs                       | Up to 48 blobs                                           |
+| **Erasure coding**      | No redundancy                       | 1D erasure coding (each blob doubled)                    |
+| **Sampling mechanism**  | None                                | Custody sampling (via subnet) + Peer sampling (via RPC)  |
+| **Recovery ability**    | None (missing blob = unrecoverable) | Recoverable if >50% of columns available                 |
+| **Protocol complexity** | Low (adds only blob sidecars)       | Medium (adds subnet gossip, Req/Resp, cell-level proofs) |
+| **Attack tolerance**    | Low (any missing blob breaks block) | Medium (can tolerate up to 50% data loss)                |
+
+---
+
+## References
+
+* [PeerDAS Resources](https://hackmd.io/@fradamt/peer-das-resources)
+* [PeerDAS Book](https://hackmd.io/@manunalepa/peerDAS/)

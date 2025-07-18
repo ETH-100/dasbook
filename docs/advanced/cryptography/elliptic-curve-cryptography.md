@@ -1,185 +1,211 @@
-密码学建立在加密容易解密难的基础上，椭圆曲线加密发端于一个简单的乘法：
+# Elliptic Curve Cryptography
+
+Cryptography is built on the principle of **easy encryption and hard decryption**. Elliptic curve cryptography originates from a seemingly simple multiplication:
 
 $$
-P=hG
+P = hG
 $$
 
-即 $P$ 是 $h$ 和 $G$ 的乘积，这看起来平平无奇，平常我们很容易在计算器上完成乘法和除法。但我们能不能实现乘法很容易，但是除法很难？当我们知道 $h$ 和 $G$ 时，计算 $P$ 非常容易，而反过来知道  $P$ 和 $G$ 计算 $h$ 则被认为是不可能的。
+That is, $P$ is the product of $h$ and $G$. This may seem unremarkable—we perform multiplication and division on calculators all the time. But can we make multiplication easy, while division is hard? Given $h$ and $G$, computing $P$ is straightforward. However, given $P$ and $G$, finding $h$ is believed to be computationally infeasible.
 
-## 椭圆曲线
+## Elliptic Curves
 
-现在我们就来“发明”这种数学，它是一个独立的小王国，对于“数字”和“加法”有着不同的理解。所有的数字，是一个一个特定的点构成的，这些点必须满足一定的条件：
+Let’s “invent” such a mathematics. It’s a self-contained kingdom with its own understanding of “numbers” and “addition.” The “numbers” here are special points that must satisfy a certain condition:
 
 $$
 y^2 = x^3 + ax + b
 $$
 
-我们用几何图形来表示，这个曲线看起来像一个椭圆
+These points can be visualized geometrically—forming what looks like an ellipse:
 
-[图片： 椭圆曲线]
+![image.png](/en/ecc1.png)
 
-观察这个曲线，不难发现一些特性：
+Observing this curve, we can notice a few features:
 
-1. 它关于 $x$ 轴对称
-2. 连接曲线上的两个点画一条直线，它会和曲线产生第三个交点
+1. It is symmetric with respect to the x-axis.
+2. A straight line connecting two points on the curve intersects it at a third point.
 
-这些特征非常有用，非常方便我们定义加法：
+These features are useful, as they help us define addition:
 
-- 若我们要计算 $A + B$ ，可以画一条直线连接点 $A$ 和 $B$ ；
-- 这条直线会与椭圆曲线在第三个点 $C$ 相交。
+* To compute $A + B$, draw a line through points $A$ and $B$;
+* The line intersects the curve at a third point $C$.
 
-有了三个元素，这就好办多了，我们可以将加法定义为： $A+B=C$ 。因为 $A$ 和 $B$ 在同一条直线上，因此我们还获得了加法交换律，即： $A+B=B+A$ ，但 $C$ 同样在这条直线上，即： $B+C=A$ ，以及 $A+C=B$ ，很明显这三个数都为 $0$ 才行，我们的小王国还没有建立就坍塌了。
+With these three elements, we can define addition as: $A + B = C$. Since $A$ and $B$ lie on the same line, we also get **commutativity**: $A + B = B + A$. But then $C$ is also on the same line, so $B + C = A$ and $A + C = B$. Clearly, this leads to contradictions unless all three are zero. Our mathematical kingdom collapses before it begins.
 
-我们还需要对 $C$ 做一次 $x$ 轴反射，得到的点记为 $R$，最终我们定义 $R = A + B$。
+To resolve this, we reflect point $C$ over the x-axis to get point $R$, and define:
 
-[图片：加法的几何定义]
+$$
+R = A + B
+$$
 
-对 $C$ 点做反射，还有一些更深远的意义。我们连接 $R$ 和 $C$ 将获得一条垂直于 $x$ 轴的直线，它和曲线看起来并无其他交点。换句话说，这条直线和椭圆曲线在无穷远处有一个交点，我们将这个无穷远处的点作为 $0$ ，因此有 $C+R=R+C=0$，以及 $A+B+C=0$ 。
+![image.png](/en/ecc2.png)
 
-另外还有一种特殊情况 $A=B$ , 这意味着 $A$ 点和 $B$ 点重合了，在几何意义上意味着这是一条切线。我们得到了 $A + A=R$ ，再次画出从 $R$ 经过 $A$ 的直线我们得到了 $A+A+A$ ，这种重复的加法，即为乘法：
+This reflection of $C$ carries deeper meaning. The line connecting $R$ and $C$ is vertical and intersects the curve at a point at infinity. We define this **point at infinity** as the **identity element** $O$, such that $C + R = 0$, and hence $A + B + C = 0$.
+
+There’s also a special case when $A = B$, meaning we’re taking a **tangent** at that point. We get $A + A = R$, and drawing a line through $R$ and $A$ again gives $A + A + A$, or:
 
 $$
 hA = \underbrace{A + A + \cdots + A}_{h}
 $$
 
-这与我们日常的乘法并没有太大差别，但它在椭圆曲线的定义下，遵循的是几何上的点加操作。而“除法”即要求我们从 $P = hA$ 反推出 $h$。这在普通整数上很简单，但在椭圆曲线下，不太严谨地讲，这是“难的”。
+This is similar to ordinary multiplication, but here it's defined geometrically using point addition. The “division” would mean solving $P = hA$ for $h$—easy for regular integers, but “hard” on elliptic curves.
 
-回顾一下，我们定义了一些“数字”，并定义了它们的加法和乘法运算，并且具有一些特殊的性质。恭喜你，你发明了数学中重要的抽象： 群。
+In summary, we've defined a set of "numbers" and their addition and multiplication operations with specific properties. Congratulations—you've just invented an important mathematical abstraction: a **group**.
 
-## 群
+## Groups
 
-正式地，一个群由以下四个属性组成：
+Formally, a group must satisfy four properties:
 
-- **封闭性**： 任意两个群元素相加，结果仍在群内；
-- **结合律**： $(a + b) + c = a + (b + c)$ ；
-- **单位元**：存在一个“零点”  $O$，使得 $a + O = a$；
-- **逆元**：对每个元素 $a$，存在一个元素 $-a$，使得 $a + (-a) = O$。
+* **Closure**: The sum of any two elements in the group remains in the group;
+* **Associativity**: $(a + b) + c = a + (b + c)$;
+* **Identity element**: There exists a "zero point" $O$ such that $a + O = a$;
+* **Inverse element**: For every $a$, there exists $-a$ such that $a + (-a) = O$.
 
-在椭圆曲线下，所有满足曲线方程的点（包括无穷远点 $O$）构成一个群，群运算是上述定义的“点加”。若群满足交换律： $a + b = b + a$ ，我们称之为**阿贝尔群**，椭圆曲线群恰是一个阿贝尔群。
+All points satisfying the elliptic curve equation (including $O$) form a group under the point addition defined above. If this group satisfies **commutativity** ($a + b = b + a$), it's called an **Abelian group**, and elliptic curve groups are indeed Abelian.
 
-目前为止椭圆曲线被定义在实数域上：
+So far we've defined curves over the real numbers:
 
 $$
 E(\mathbb{R}):\quad y^2 = x^3 + ax + b,\quad a, b \in \mathbb{R},\quad 4a^3 + 27b^2 \ne 0
 $$
 
-其中， $4a^3 + 27b^2 \ne 0$ 是为了排除一些特殊的奇奇怪怪的形状，使得曲线平滑。
+The condition $4a^3 + 27b^2 \ne 0$ ensures the curve is **smooth**, avoiding cusps or self-intersections.
 
-实数对于应用来说很不方便，整数同样可能过大，因为最终我们需要“加密简单，解密难”。在密码学中，我们将曲线定义在有限域上，通过模运算可以实现这一点。例如：
+But real numbers are inconvenient in practice. Integers might also be too large. In cryptography, we work over **finite fields** using **modular arithmetic**. For example:
 
 $$
-E:y2=x3+ax+b \mod p
+E: y^2 = x^3 + ax + b \mod p
 $$
 
-模运算又被称为时钟运算，无论时钟运行了多长时间，表盘的刻度永远在时钟的范围内。例如，现在是 $3$ 点，加上 $13$ 小时则为 $4$ 点，最终结果无论如何都被限制在一定范围内，即所有数值都限制在 $0$ 到 $p−1$ 之间的整数，这个有限域通常用 $\mathbb{F}_p$ 表示。此时曲线上的点不再是一条光滑的线，而是由离散分布的点构成，不能用传统图像来表示。虽然我们进行了取整、模运算等操作，但 $\mathbb{F}_p$ 仍然满足我们的四个群属性，即它仍然是一个阿贝尔群，我们略去证明的过程，因为这并不违反直觉。现在这个小王国已经可以正式诞生了：
+This “clock arithmetic” ensures all values are constrained between $0$ and $p - 1$. This finite field is denoted as $\mathbb{F}_p$. The curve is no longer smooth, but consists of **discrete points**.
+
+Despite rounding and modulo operations, $\mathbb{F}_p$ still satisfies group properties. Hence, this is a legitimate mathematical kingdom:
 
 $$
 E(\mathbb{F}_p):\quad y^2 \equiv x^3 + ax + b \pmod{p},\quad a, b \in \mathbb{F}_p,\quad 4a^3 + 27b^2 \not\equiv 0 \pmod{p}
 $$
 
-在实数域，乘法实际上仍然可以被观察出一定的特征，从而缩小乘法逆运算的结果范围，但在经过模运算的 $\mathbb{F}_p$ 中是一个实实在在的难题，这就是经典的椭圆曲线离散对数问题。现在回到建立这个小王国的初衷：
+In the real-number case, multiplication still leaks structural clues. But in $\mathbb{F}_p$, **finding $h$ from $P = hG$ is truly hard**—this is the **elliptic curve discrete logarithm problem (ECDLP)**. Now, back to our original intention:
 
 $$
-P=hG
+P = hG
 $$
 
-已知 $h$ 和 $G$ 可以通过乘法计算出 $P$ ，只需要把 $h$ 个 $G$ 加起来。但如果 $h$ 过大（例如 $2^{256}$）这仍然需要耗费大量资源，好在我们有双倍加法（Double-and-Add Algorithm）、滑动窗口法（Sliding Window / wNAF）等等可以简化乘法。其中双倍点加法可以将复杂度缩小到 $O(\log h)$，例如我们要计算 $13G$ :
+Given $h$ and $G$, we can compute $P$ by adding $G$ $h$ times. But for large $h$ (e.g., $2^{256}$), this is computationally expensive. Fortunately, we have optimizations like:
 
-1. $2G = G+G$
-2. $3G = 2G+G$
-3. $6G=3G+3G$
-4. $12G=6G+6G$
-5. $13G=12G+G$
+* **Double-and-add algorithm**
+* **Sliding window (wNAF)**
 
-现在我们拥有了简单的乘法，并且除法是难的，接下来我们只需要确定一条椭圆曲线，并选择一个点和乘数，就可以达到最终目的。但是，在 $\mathbb{F}_p$ 中成员数量是有限的，如果数目过小则会给我们带来安全问题。我们应该选择什么样的曲线，在曲线上又该选择什么样的点呢？
+For example, using double-and-add, we can compute $13G$ in logarithmic steps:
 
-## 阶
+1. $2G = G + G$
+2. $3G = 2G + G$
+3. $6G = 3G + 3G$
+4. $12G = 6G + 6G$
+5. $13G = 12G + G$
 
-对于选定的椭圆曲线，我们可以依次计算所有值，得出群成员数量。但这种方式显然是不切实际的，好在我们可以通过  Schoof's algorithm 非常简便地计算群成员数量，这也被称为群的阶。
+Now we have **easy multiplication** and **hard division**. We just need to select a curve and a base point. But since $\mathbb{F}_p$ is finite, poor choices can be insecure. So what kind of curve and point should we choose?
 
-但是 $P$ 只是椭圆曲线上的一个点，我们该怎么知道 $hP$ 有多少个结果？现在我们选取一条椭圆曲线中的点，并计算 $hP$ 的结果，看看会发生什么。我们在有限域 $\mathbb{F}_5$（模 5）上考虑椭圆曲线：
+## Order
+
+For a given elliptic curve, we can compute the number of points (the **group order**), though exhaustively enumerating is impractical. Fortunately, **Schoof's algorithm** allows efficient computation.
+
+Given a point $P$, how many distinct results can $hP$ produce? Let’s explore this on:
 
 $$
-E: y² ≡ x³ + x + 1 \mod 5
+E: y^2 \equiv x^3 + x + 1 \mod 5
 $$
 
-选取曲线上的一个点：
+Pick a point:
 
 $$
 P = (0,1)
 $$
 
-让我们开始计算：
+Now compute successive multiples:
 
-- $P = (0,1)$
-- $2P = (4,2)$
-- $3P = (2,1)$
-- $4P = (3,4)$
-- $5P = (3,1)$
-- $6P = (2,4)$
-- $7P = (4,3)$
-- $8P = (0,4)$
-- $9P = O$
-- $10P = (0,1) = P$
+* $P = (0,1)$
+* $2P = (4,2)$
+* $3P = (2,1)$
+* $4P = (3,4)$
+* $5P = (3,1)$
+* $6P = (2,4)$
+* $7P = (4,3)$
+* $8P = (0,4)$
+* $9P = O$
+* $10P = P$
 
-可以观察到，在 $9P$ 处结果归 $O$ ，从而结果开始循环，该点所有结果都可以表示为：
-
-$$
-kP=(k \mod 9)P
-$$
-
-实际上，这对曲线上所有点都适用，我们可以简单地证明这一点：目前我们知道 $hP$ 的结果是有限的，但作为正整数的 $h$ 是无限的，因此，必定存在一个不相等的 $h_1$ 和 $h_2$ 使得 $h_1P=h_2P$，即： $(h_1-h_2)P=O$ 。最终，一定存在一个 $h_3=h_1-h_2$ 使得 $h_3H=O$。并且， $(h_3+k)P = O + kP = kP$。也就是说，该点所有乘积构成了一个循环子群。子群的阶等价于使得 $nP =0$ 的最小数$n$。
-
-根据拉格朗日定理，子群的阶是父群阶的因子。即父群的阶为 $N$，子群的阶为 $n$，则 $n$ 为 $N$ 的因子。简单点说， $N$ 一定为 $n$ 的倍数，这听起来很奇怪，但我们可以用反证法简易地验证。
-
-$H$ 是 $G$ 的子集，我们在 $H$ 之外选取一个点 $g \in G$ ，将 $g$ 加上 $H$ 中的所有元素，得到一个新的集合，即：
+At $9P$, we return to the identity $O$, meaning the results **cycle**. So all values of $kP$ satisfy:
 
 $$
-gH = \{ g * h : h \in H \}
+kP = (k \mod 9)P
 $$
 
-随后重复此过程，需要注意的是：
+This holds for all points on the curve. Since there are finitely many $hP$, but infinitely many $h \in \mathbb{Z}^+$, there must exist $h_1 \ne h_2$ such that $h_1P = h_2P$, i.e.:
 
-- 每个 $gH$ 都是两两不交的，我们略去证明
-- 由于 $H$ 中一定存在 $O$ ，所以 $g$ 被包含到了 $gH$ 中
+$$
+(h_1 - h_2)P = O
+$$
 
-[图： 左陪集]
+Thus, for some smallest $n$, we have:
 
-如果拉格朗日定理不成立，那么最后将会剩下一个数量小于 $H$ 的结果集。这意味着 $H$ 中一定存在两个不同的点加上 $g$ 得到相同的结果，这是矛盾的。
+$$
+nP = O
+$$
 
-现在事情好办多了，现在，我们选取一个椭圆曲线，它的阶 $N$ 足够大，并且有一个很大的因子 $n$ ，现在我们怎么找到阶为 $n$ 的基点 $G$ 呢？
+and $kP$ becomes **cyclic**. The smallest such $n$ is the **order** of point $P$.
 
-## 计算基点
+By **Lagrange's theorem**, the order of any subgroup divides the order of the full group. That is, if $G$ has order $N$, and a subgroup has order $n$, then:
 
-我们可以通过 **协因子（Cofactor）**的帮助选择这样的基点。设定我们选取的椭圆曲线的群阶为 $N$，我们期望使用一个阶为 $n$ 的子群进行加密操作。我们定义协因子为：
+$$
+n \mid N
+$$
+
+Let $H \subset G$ be a subgroup, and $g \in G \setminus H$. Then:
+
+$$
+g + H := \{ g + h \mid h \in H \}
+$$
+
+Each **coset** $g + H$ is disjoint, and since $O \in H$, $g \in g + H$.
+
+![image.png](/en/gh.png)
+
+If Lagrange’s theorem didn’t hold, we would have leftover elements, contradicting group closure. Hence, the group can be partitioned into disjoint cosets of size $n$.
+
+Now we just need to choose a curve with large order $N$ and a large factor $n$. How do we find a point of order $n$?
+
+## Finding the Base Point
+
+We use the **cofactor method**. Let the curve have order $N$, and we want a subgroup of prime order $n$. Define the **cofactor**:
 
 $$
 h = \frac{N}{n}
 $$
 
-也就是说， $n$ 是我们希望使用的子群的阶，而 $N$ 是整个椭圆曲线群的阶， $h$ 是它们之间的倍数关系。由于我们要选择一个阶为 $n$ 的点 $G$，先随便选取一个曲线上的点 $P$，然后计算：
+Randomly select a point $P$ on the curve, and compute:
 
 $$
 G = hP
 $$
 
-此时 $G$ 很有可能是我们要找的基点，因为：
+This $G$ is likely to be a point of order $n$:
 
 $$
-nG=ghP=NP=O
+nG = nhP = NP = O
 $$
 
-除非 $G=O$ ，此时我们需要重新选择一个 $P$ 。另外 $n$ 应当是个素数，否则可以分解为不同的因子，不一定是 $G$ 的阶，另外更重要的一点是素数阶是椭圆加密应用的需要。
+Unless $G = O$, in which case retry with a new $P$. Also, $n$ should be a **prime** to avoid factorization issues and because prime-order subgroups are needed in cryptographic applications.
 
-## 总结
+## Summary
 
-至此，我们完成了整个小王国的搭建：
+We’ve built our mathematical kingdom:
 
-1. 选择一条合适的椭圆曲线（满足安全参数）；
-2. 使用 Schoof 等算法计算其群阶 $N$；
-3. 选定一个阶为大素数 $n$ 的子群；
-4. 计算协因子 $h = N / n$；
-5. 任意取点 $P$，计算 $G = hP$；
-6. 若 $G ≠ O$，则 $G$ 是我们想要的基点，可以开始加密系统构建。
+1. Choose a secure elliptic curve;
+2. Use Schoof’s algorithm to compute the group order $N$;
+3. Select a prime order $n$;
+4. Compute cofactor $h = N / n$;
+5. Pick a random point $P$ and compute $G = hP$;
+6. If $G \ne O$, it is the base point. Use it to build cryptographic systems.
 
-接下来，我们就可以基于这个基点 $G$，构造密钥对、公钥加密、签名等密码学应用了。这就是现代椭圆曲线密码学的核心逻辑。
+Now, with base point $G$, we can generate **key pairs**, perform **public-key encryption**, and **digital signatures**. This is the foundation of **modern elliptic curve cryptography**.

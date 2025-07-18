@@ -1,64 +1,77 @@
-Miller 算法和我们之前提到的 “双倍加法法”（double-and-add）类似，并不按部就班地就算所有乘积，而是翻倍地进行，将复杂度减少到对数级别。但 Miller 算法面对的是函数，而非具体的值。这需要一些额外的技巧，虽然我们无法给出某函数的具体表达式，但可以通过不断迭代从而逐渐逼近最终结果。
 
-现在我们需要计算函数：
+# Miller's Algorithm
+
+Miller's algorithm is similar to the previously mentioned **double-and-add** method. Instead of computing all products step by step, it proceeds by doubling, reducing complexity to logarithmic scale. However, Miller's algorithm deals with **functions**, not concrete values. This requires additional techniques: although we cannot explicitly write out a function’s formula, we can iteratively approximate the final result.
+
+Now we want to compute the function:
 
 $$
 f_P(Q + X)/f_P(X)
 $$
 
-其中， $f_P$ 是一个有理函数，虽然我们无法写出它的表达式，但知道其除子 $\text{div}(f_P) = m[P] - m[O]$ 。我们可以不断地乘以函数 $\ell$ ，每次将 $[P]$ 和 $[O]$ 的阶提升 $1$ 。准确来说，每次迭代后的 $f_i$ 的除子都满足：
+Here, $f_P$ is a rational function whose explicit expression we don’t know, but we know its divisor is $\text{div}(f_P) = m[P] - m[O]$. We can iteratively multiply by a function $\ell$, each time increasing the order at $[P]$ and $[O]$ by one. Specifically, the divisor of each intermediate function $f_i$ satisfies:
 
 $$
-div(f_i)=i[P]−[iP]−(i−1)[O]
+\operatorname{div}(f_i) = i[P] - [iP] - (i - 1)[O]
 $$
 
-我们用每次迭代完成后获得的点 $T=iP$ 以及点 $P$ 本身，来构造新的 $f_i$ 。我们可以从几何角度看待每次迭代：
+We use the point $T = iP$ obtained at each iteration, along with $P$ itself, to construct the next $f_i$. This process can be interpreted geometrically:
 
-**进步**
+**Addition Step**
 
-[加法图]
-
-$$
-f_{i+1} = f_i \cdot g_{T,P}/g_{T+P}
-$$
-
-其中 $g_{T,P}$ 为通过点 $T,P$ 的直线， $g_{T+P}$ 为经过 $T+P$ 的垂直线，其除子分别为：
+![image.png](/zh/miller1.png)
 
 $$
-div(g_{T,P})=[T]+[P]+[−(T+P)]−3[O]
+f_{i+1} = f_i \cdot g_{T,P} / g_{T+P}
 $$
 
-$$
-div(g_{T+P})=[T+P]+[−(T+P)]−2[O]
-$$
+Where:
 
-所以
+* $g_{T,P}$ is the line through points $T$ and $P$
+* $g_{T+P}$ is the vertical line through $T + P$
 
-$$
-div(g_{T+P}/g_{T,P})=[T]+[P]−[T+P]−[O]
-$$
-
-最后，我们来验证迭代后的除子：
+Their respective divisors are:
 
 $$
-div(f_{i+1})=i[P]−[T]−(i−1)[O]+[T]+[P]−[T+P]−[O]
+\operatorname{div}(g_{T,P}) = [T] + [P] + [- (T + P)] - 3[O]
 $$
 
 $$
-=(i+1)[P]−[T+P]−i[O]
+\operatorname{div}(g_{T+P}) = [T + P] + [- (T + P)] - 2[O]
 $$
 
-验证通过。
-
-**倍步**
-
-[倍步图]
+So the divisor of their ratio is:
 
 $$
-f_{i+1} = f_i \cdot g_{T,T}/g_{2T}
+\operatorname{div}(g_{T+P}/g_{T,P}) = [T] + [P] - [T + P] - [O]
 $$
 
-其中 $g_{T,T}$ 为椭圆曲线在 $T$ 的切线， $g_{2T}$ 为经过 $2T$ 的垂直线，其除子分别为：
+Now let’s verify the updated divisor after one iteration:
+
+$$
+\operatorname{div}(f_{i+1}) = i[P] - [T] - (i - 1)[O] + [T] + [P] - [T + P] - [O]
+$$
+
+$$
+= (i + 1)[P] - [T + P] - i[O]
+$$
+
+Which confirms the correctness.
+
+**Doubling Step**
+
+![image.png](/zh/miller2.png)
+
+$$
+f_{i+1} = f_i \cdot g_{T,T} / g_{2T}
+$$
+
+Where:
+
+* $g_{T,T}$ is the tangent line at point $T$
+* $g_{2T}$ is the vertical line through $2T$
+
+Their divisors are:
 
 $$
 \operatorname{div}(g_{T,T}) = 2[T] + [-2T] - 3[O]
@@ -68,29 +81,35 @@ $$
 \operatorname{div}(g_{2T}) = [2T] + [-2T] - 2[O]
 $$
 
-所以
+Thus:
 
 $$
-div(g_{T+T}/g_{2T})=2[T]-[2T]-[O]
+\operatorname{div}(g_{T+T} / g_{2T}) = 2[T] - [2T] - [O]
 $$
 
-最后，我们来验证迭代后的除子：
+Now verify the new divisor after the doubling:
 
 $$
-div(f_{2i})=2i[P]−2[iP]−2(i−1)[O]+2[T]-[2T]-[O]
+\operatorname{div}(f_{2i}) = 2i[P] - 2[iP] - 2(i - 1)[O] + 2[T] - [2T] - [O]
 $$
 
 $$
-=2i[P]−(2i−1)[O]-[2T]
+= 2i[P] - (2i - 1)[O] - [2T]
 $$
 
-验证通过。
+Which also checks out.
 
-当迭代到 $i=m$ 时， $iP=mP=O$，从而得到 $f_m=m[P]-m[O]$ ，迭代停止。总结一下迭代步骤：
+When we reach $i = m$, we get $iP = mP = O$, and the final function is:
 
-1. 构造函数 $f_i$ 的下一项；
-2. 评估函数 $\ell(x, y) = y - y_T - \lambda(x - x_T)$ 在点 $Q$ 上的值（即代入 $Q$）；
-3. 将其值乘到累计的 pairing 值上；
-4. 继续进行下一步迭代，直到完成。
+$$
+f_m = m[P] - m[O]
+$$
 
-Tate 配对通过 Miller 算法虽然大幅减少了计算量，但开销仍然非常巨大，对于 $2^{256}$ 级别的计算，需要迭代 $256$ 次。在实际应用中，我们使用 Ate 配对，它将复杂度降低到个位数级别。
+—at which point the iteration stops. Here's a summary of the steps:
+
+1. Construct the next function $f_i$
+2. Evaluate the line function $\ell(x, y) = y - y_T - \lambda(x - x_T)$ at point $Q$ (i.e., substitute $Q$ into the function)
+3. Multiply the evaluated result into the accumulated pairing value
+4. Continue the next iteration until complete
+
+While the **Tate pairing** benefits greatly from Miller’s algorithm by reducing computational cost, it is still expensive. For a 256-bit computation (e.g., $2^{256}$), we need 256 iterations. In practice, we often use the **Ate pairing**, which brings the complexity down to just a few iterations.

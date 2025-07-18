@@ -1,115 +1,124 @@
-有了除子这个工具我们就可以正式寻找配对函数了。我们在域 $K$ 上定义椭圆曲线 $E(K)$ ，配对
 
-$e_m(P,Q)$ 中的两点 $P$ , $Q$ 在 $E[m]$ 中，即：
+# Weil Pairing
 
-$$
-mQ=mP=O
-$$
-
-正如前文所说，我们首先利用 $Q$ 点构造一个预支相关的函数族，要求除子为：
+With the tool of divisors in hand, we are now ready to search for a pairing function. Let’s define an elliptic curve $E(K)$ over a field $K$. In the pairing $e_m(P, Q)$, both points $P$ and $Q$ lie in $E[m]$, i.e.,
 
 $$
-div⁡(f_Q)=m[Q]−m[O]
+mP = mQ = O
 $$
 
-这意味着 $f_Q$ 在 $Q$ 的位置有 $m$ 阶零点，在无穷远点 $O$ 有 $m$ 阶极点。这个除子构造结构很简单，而且绑定了 $Q$ 点，并且根据主除子定理，这样的函数一定存在。但我们并不直接应用这个函数，而是需要对输入作出一些变换，之后再输入 $f_Q$ 得到最终值。我们称之为复合函数，使用 $f_Q \circ [m](X)$ ****来表示， $X$ 为这个函数的输入，通过将 $X$ 映射到 $[m]X$，再输入 $f$ 得到值。
+As mentioned earlier, we begin by constructing a related family of functions from point $Q$, with a divisor requirement:
+
+$$
+\operatorname{div}(f_Q) = m[Q] - m[O]
+$$
+
+This means $f_Q$ has a zero of order $m$ at $Q$ and a pole of order $m$ at the point at infinity $O$. This divisor structure is straightforward, tightly bound to point $Q$, and by the **Principal Divisor Theorem**, such a function must exist.
+
+However, we do not use this function directly. Instead, we apply a transformation to the input before feeding it into $f_Q$. This is called function composition, and we denote it as:
 
 $$
 f_Q \circ [m](X) := f_Q([m]X)
 $$
 
-原函数 $f$ 在点 $Q$ 是一个 $m$ 阶零点，所以复合函数 $f \circ [m]$ 在所有满足 $[m]X = Q$ 的点 $X$，都会有零点。并且，这些点继承了 $f$ 在 $Q$ 处的重数 $m$。所以 $f \circ [m]$ 除子的零点部分，是所有满足 $[m]X = Q$ 的 $X$ 的和构成的：
+Since $f$ has a zero of order $m$ at $Q$, the composite function $f \circ [m]$ has zeros at all $X$ satisfying $[m]X = Q$, each with multiplicity $m$. Therefore, the zero part of the divisor of $f \circ [m]$ is:
 
 $$
 \sum_{[m]X = Q} m[X]
 $$
 
-同理， $f \circ [m]$ 在 $[m]^*O$ 处有 $m$ 阶极点。这些满足 $[m]X = Q$  的 $X$ 组成的集合记为 $[m]^*Q$，即  $Q$ 的所有 $m$ 倍前像点。
+Similarly, $f \circ [m]$ has poles of order $m$ at all $X$ satisfying $[m]X = O$. The set of all such $X$ mapping to $Q$ under $[m]$ is denoted $[m]^\*Q$ (i.e., the preimage of $Q$ under multiplication-by-$m$).
 
-这些前像点有一个非常美妙的特性，同样也是 Weil 配对起作用的关键之处。我们把这些点记为  $Q'$ :
-
-$$
-[m]Q'=Q
-$$
-
-现在我们在 $E[m]$ 中取任意点 $R$ ，毫无疑问 $[m]R=O$ 。我们将上式变换为：
+These preimage points have a remarkable property, and it's the key to why the Weil pairing works. Let’s denote one such point as $Q'$, so that:
 
 $$
-[m](Q'+R)=[m]Q'+[m]R=[m]Q'+O=[m]Q'=Q
+[m]Q' = Q
 $$
 
-神奇的事情发生了：无论我们往 $Q'$ 上加哪个 $R$，都得到了一个新的 $f \circ [m]$ 的零点。也就是说，所有这些满足 $[m]X = Q$ 的点，其实都可以写成 $Q'+R$ 。同理，所有满足 $[m]X = O$ 的点，就是：
+Now, take any $R \in E[m]$, so clearly $[m]R = O$. Then:
 
 $$
-\{R∣R\in E[m]\}
+[m](Q' + R) = [m]Q' + [m]R = Q + O = Q
 $$
 
-因此， $f \circ [m]$ 的完整除子可以写成：
+Here’s the magic: no matter which $R$ you add to $Q'$, the result is another zero of $f \circ [m]$. That is, every solution to $[m]X = Q$ can be written as $Q' + R$ for some $R \in E[m]$.
+
+Similarly, all $X$ satisfying $[m]X = O$ are just:
+
+$$
+\{R \mid R \in E[m]\}
+$$
+
+So the full divisor of $f \circ [m]$ can be written as:
 
 $$
 \operatorname{div}(f \circ [m]) = \sum_{R \in E[m]} m[Q' + R] - \sum_{R \in E[m]} m[R]
 $$
 
-现在，是不是存在一个函数 $g$ ，它在每个 $Q'+R$ 处有一个零点，在每个 $R$ 处有一个极点？这样一来， $g$ 的除子将为：
+Now, suppose there exists a function $g$ that has simple zeros at each $Q' + R$ and simple poles at each $R$ for $R \in E[m]$. Then the divisor of $g$ is:
 
 $$
 \operatorname{div}(g) = \sum_{R \in E[m]} [Q' + R] - \sum_{R \in E[m]} [R]
 $$
 
-这表示， $g$ 把 $E[m]$ 上的每个点 $R$，加上固定偏移量 $Q'$，在位置 $Q'+R$ 上制造了一个零点。可以把 $g$ 理解为一种差值函数，在 $Q'+R$ 和 $R$ 之间制造对应关系。不难发现 $g^m$ 的除子和 $f_Q \circ [m]$ 是相同的，不考虑常数倍，它们是相同的函数。
+This means $g$ shifts every point $R$ in $E[m]$ by $Q'$ and introduces a zero at $Q' + R$. You can think of $g$ as a kind of interpolation function between $Q' + R$ and $R$. It’s not hard to see that:
 
 $$
 g^m = f_Q \circ [m]
 $$
 
-现在我们终于可以引入具体的配对函数了。 $X$ 是椭圆曲线上的任意点，然后：
+(Up to a multiplicative constant, they are the same function.)
+
+Now we can finally define the **Weil pairing function**. Let $X$ be any point on the elliptic curve. Then:
 
 $$
 e_m(P, Q) := \frac{g(X + P)}{g(X)}
 $$
 
-即取函数 $g$，在点 $X$ 和 $X + P$ 上分别求值，然后求一个比值。当我们对它进行 $m$ 次方时：
+That is, evaluate the function $g$ at $X$ and at $X + P$, and take the ratio. Raising this to the $m$-th power:
 
 $$
 \left( \frac{g(X + P)}{g(X)} \right)^m = \frac{g^m(X + P)}{g^m(X)} = \frac{f_Q([m](X + P))}{f_Q([m]X)} = \frac{f_Q([m]X)}{f_Q([m]X)} = 1
 $$
 
-因为 $[m]P = O$，所以 $[m](X + P) = [m]X$，分子分母相等。不管你选择哪个 $X$，只要 $P$ 和 $Q$ 是固定的， $e_m(P, Q)$ 的值都是一样的。这表明 $e_m(P, Q)$ 的 $m$ 次方等于 $1$ ，它是一个 $m$ 次单位根。这个比值非常神奇地落入单位根群 $\mu_m$ 中， $\mu_m$ 为 $m$ 次单位根群，即所有满足 $z^m = 1$ 的 $z$ 构成的集合。正式地：
+Since $[m]P = O$, then $[m](X + P) = [m]X$, making numerator and denominator equal. No matter which $X$ you choose, as long as $P$ and $Q$ are fixed, $e_m(P, Q)$ has the same value. This shows that $e_m(P, Q)^m = 1$—it lies in the group of **$m$-th roots of unity**, denoted $\mu_m$.
+
+Formally:
 
 $$
-e_m(P,Q): E[m] \times E[m] \to \mu_m
+e_m(P, Q):\ E[m] \times E[m] \to \mu_m
 $$
 
-Weil 配对具备双线性，这意味着：
+The Weil pairing is **bilinear**, which means:
 
 $$
 e_m(P + R, Q) = e_m(P, Q) \cdot e_m(R, Q)
 $$
 
-我们将 $g$ 代入：
+Substitute the definition of $g$:
 
 $$
 e_m(P + R, Q) = \frac{g_Q(X + P + R)}{g_Q(X)}
 $$
 
-上下同时乘上 $g_Q(X + P)$ ：
+Now multiply numerator and denominator by $g_Q(X + P)$:
 
 $$
 = \frac{g_Q(X + P + R)}{g_Q(X + P)} \cdot \frac{g_Q(X + P)}{g_Q(X)}
 $$
 
-引入另一个点 $Y = X + P$ 将得到：
+Let $Y = X + P$, then:
 
 $$
 = \frac{g_Q(Y + R)}{g_Q(Y)} \cdot \frac{g_Q(X + P)}{g_Q(X)} = e_m(R, Q) \cdot e_m(P, Q)
 $$
 
-另一个方向 $e_m(P,Q+R)=e_m(P,Q)e_m(P,R)$ 同样成立，但证明稍复杂些。
+The other direction, $e_m(P, Q + R) = e_m(P, Q) \cdot e_m(P, R)$, also holds, though the proof is more involved.
 
-Weil 配对的初始公式虽然很优雅简洁，但是 $g_Q$ 函数除子结构复杂，非常难以构造，通常我们采用另一个更好的替代算法：
+Although the original definition of the Weil pairing is elegant and concise, constructing the function $g_Q$ with the appropriate divisor is difficult in practice. Therefore, we often use a more practical alternative:
 
 $$
 e_m(P, Q) = \frac{f_P(Q + X)}{f_P(X)} \Big/ \frac{f_Q(P - X)}{f_Q(-X)}
 $$
 
-这个公式长得不太一样，但结果是完全等价的，并且只需要构造 $f_P$ 和 $f_Q$，这两个函数我们前面已经明确地构造出来了。
+This formula looks different, but is mathematically equivalent. It only requires constructing the functions $f_P$ and $f_Q$, both of which we have already constructed explicitly.

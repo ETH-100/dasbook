@@ -1,202 +1,217 @@
-我们在前面提到，在数据可用性中使用默克尔证明，将会导致恶意交易被隐藏，从而导致安全问题。这是因为默克尔证明仅仅绑定了数据项，而并非对多项式整体进行绑定，导致单个数据项可以被篡改。多项式承诺可以解决这个问题，它绑定了整个多项式。
+# Polynomial Commitment
 
-我们用如下形式表示多项式：
+As previously mentioned, using Merkle proofs in data availability introduces a security issue: malicious transactions can be hidden. This is because a Merkle proof only binds individual data elements, not the entire polynomial. This allows individual data points to be altered without detection. Polynomial commitments solve this problem by binding the entire polynomial.
 
-$$
-f(x) = a_0⋅x^0 + a_1⋅x^1 + a_2⋅x^2 ... + a_n⋅x^n
-$$
-
-正如我们经常做的，首先生成一个秘密值 $s$ , 并将 $s$ 代入到 $f(x)$ 中计算的结果，即为绑定整个多项式的承诺：
+We represent a polynomial in the following form:
 
 $$
-C=Commit(f)=f(s) \cdot G_1
+f(x) = a_0 x^0 + a_1 x^1 + a_2 x^2 + \dots + a_n x^n
 $$
 
-然而，在 KZG 承诺中，我们无法完全消除 $s$ ，但可以预先计算 $s^i \cdot G_1$ 和 $s^i \cdot G_2$ 后，将 $s$ 以某种方式销毁保证无人知晓 $s$ 的值。这被称为可信设置（Trust setup），最终我们将获得一堆如下公开值：
+As usual, we first generate a secret value $s$, and compute the result of plugging $s$ into $f(x)$. The result, when multiplied by a base point in group $G_1$, becomes the commitment to the entire polynomial:
 
 $$
-[s^0\cdot G_1, s^1 \cdot G_1, s^2 \cdot G_1, ...]
+C = \text{Commit}(f) = f(s) \cdot G_1
+$$
+
+However, in KZG commitments, we cannot fully eliminate knowledge of $s$, but we can precompute $s^i \cdot G_1$ and $s^i \cdot G_2$, and then securely destroy $s$ to ensure no one knows its value. This process is known as a **trusted setup**. Ultimately, we publicly obtain values such as:
+
+$$
+[s^0 \cdot G_1, s^1 \cdot G_1, s^2 \cdot G_1, \dots]
 $$
 
 $$
-[s^0\cdot G_2, s^1 \cdot G_2, s^2 \cdot G_2, ...]
+[s^0 \cdot G_2, s^1 \cdot G_2, s^2 \cdot G_2, \dots]
 $$
 
-在计算具体的 $C$ 时，只需要代入系数即可。不难看出，无论多项式是什么，最终的 $C$ 都为椭圆曲线上的点。对于其中的每个 $x_i, y_i$ 都可以生成一个证明，验证者只需要承诺 $C$ 即可验证 $x_i, y_i$ 是否为多项式的值。生成  $f(z) = y$ 的证明需要知道完整的多项式，从而可以构造一个商多项式：
+To compute a specific commitment $C$, we only need to substitute the polynomial's coefficients. Clearly, no matter what $f(x)$ is, the resulting $C$ is always a point on the elliptic curve. For every point $(x_i, y_i)$, a proof can be generated. The verifier only needs the commitment $C$ to check whether $(x_i, y_i)$ is a valid evaluation.
+
+To prove that $f(z) = y$, we need knowledge of the full polynomial so we can construct the quotient polynomial:
 
 $$
 q(x) = \frac{g(x)}{x - z}
 $$
 
-其中 $g(x)=f(x) - f(z)$ 。这里使用到多项式除法，它和有理数除法类似，有商多项式和余数多项式，我们本可以写为：
+where $g(x) = f(x) - f(z)$. This uses **polynomial division**, which is similar to rational division. It has a quotient and a remainder:
 
 $$
-g(x)=q(x) \cdot (x-z) + r
+g(x) = q(x)(x - z) + r
 $$
 
-其中 $r$ 为余数多项式。取 $x=z$ 可得：
+Substituting $x = z$ yields:
 
 $$
-r=0
+r = 0
 $$
 
-之后，我们生成证明：
-
-$$
-\pi=q(s) \cdot G_1
-$$
-
-提供原始数据 $x_i,y_i$ ，承诺 $C$ ，证明 $\pi$ ，即可使用椭圆曲线配对进行验证：
-
-$$
-e(C - y_i \cdot G_1, G_2) = e(\pi, s\cdot G_2 - x_i \cdot G_2)
-$$
-
-为了验证 KZG 的有效性，我们将秘密 $s$ 代入：
-
-$$
-f(s)-f(z)=q(s)\cdot(s-z)
-$$
-
-于是：
-
-$$
-[f(s)-f(z)]\cdot G_1=[q(s) \cdot (s-z)] \cdot G_1
-$$
-
-$$
-f(s) \cdot G_1-f(z) \cdot G_1=q(s) \cdot G_1 \cdot (s-z)
-$$
-
-其中， $f(s) \cdot G_1-f(z)=C$ ，我们使用配对来完成接下来的步骤：
-
-$$
-e(C - y_i⋅G_1, G_2) = e(q(s) \cdot G_1 \cdot (s - x_i),G_2)
-$$
-
-$$
-=e(q(s) \cdot G_1, (s - x_i) \cdot G_2)
-$$
-
-$$
-=e(\pi, s \cdot G_2 - x_i \cdot G_2)
-$$
-
-有效性验证成功。
-
-## 示例
-
-我们通过实际示例来完成演示 KZG 承诺的完整流程，多项式为：
-
-$$
-f(x) = 2x^2 + 3x + 1
-$$
-
-### 生成承诺
-
-$$
-C=2 \cdot s^2\cdot G_1 + 3\cdot s\cdot G_1 + G_1
-$$
-
-其中 $s^2\cdot G_1$ 和 $s\cdot G_1$ 都是预先生成的已知值
-
-### 生成证明
-
-选定一点 $x_i = 1$ ，并计算：
-
-$$
-f(1) = 2(1)^2 + 3(1) + 1 = 6
-$$
-
-我们需要在不出示具体多项式的情况下，证明：
-
-$$
-f(1) = 6
-$$
-
-现在，构造：
-
-$$
-g(x) = f(x) - 6 = 2x^2 + 3x + 1 - 6 = 2x^2 + 3x - 5
-$$
-
-计算商多项式 $q(x)$，我们要把 $g(x) = 2x^2 + 3x - 5$ 除以 $(x - 1)$，这里使用多项式除法。我们手动计算
-
-```jsx
-
-        2x + 5
-      ----------------
-x - 1 | 2x^2 + 3x - 5
-         - (2x^2 - 2x)
-         --------------
-                 5x - 5
-             - (5x - 5)
-             ------------
-                     0
-```
-
-所以我们得到：
-
-$$
-q(x) = 2x + 5
-$$
-
-因此证明为：
-
-$$
-\pi = 2\cdot s\cdot G_1 + 5\cdot G_1
-$$
-
-最终，我们公开原始数据 $(1,6)$ ，承诺 $C$ , 以及 $\pi$ ，即可验证。
-
-## 批量证明
-
-KZG 承诺不仅支持单点值的验证，还可以为多个点生成同一个证明。我们仅使用一个群元素来证明多个点 $(x_0, y_0), (x_1, y_1), \dots, (x_k, y_k)$ 都是多项式 $f(x)$ 的真实取值。首先，为给定的 $k$ 个点构造一个插值多项式 $i(x)$，它满足：
-
-$$
-i(x_j) = y_j, \quad \text{for all } j \in \{0,1,\dots,k\}
-$$
-
-这个插值多项式可以通过拉格朗日插值计算得到，并且其次数严格小于 $k$。接着我们构造商多项式：
-
-$$
-q(x) = \frac{g(x)}{z(x)}
-$$
-
-其中 $g(x)=f(x) - i(x)$ ， $z(x)$ 为消零多项式：
-
-$$
-z(x) = (x - x_0)(x - x_1)\dots(x - x_k)
-$$
-
-这里 $g(x)$ 同样能被 $z(x)$ 整除，因为当 $x=x_j$ 时， $f(x_j)=i(x_j)$ ，此时 $g(x_i) = 0$ ，同时消零多项式 $z(x_j)=0$ 。与单点证明中类似的原理可得 $r=0$ 。
-
-之后我们将 $q(x)$ 的值在秘密点 $s$ 处承诺：
+We then generate the proof:
 
 $$
 \pi = q(s) \cdot G_1
 $$
 
-这个 $\pi$ 即为 KZG 的批量证明。此时证明者公开  $(x_0, y_0), (x_1, y_1), \dots, (x_k, y_k)$ ，证明 $\pi$ ，以及承诺 $C$ 。
+By providing the original point $(x_i, y_i)$, the commitment $C$, and the proof $\pi$, one can verify using elliptic curve pairings:
 
-验证者持有：
+$$
+e(C - y_i \cdot G_1, G_2) = e(\pi, s \cdot G_2 - x_i \cdot G_2)
+$$
 
-- 多项式的承诺 $C = f(s) \cdot G_1$
-- 插值多项式 $i(x)$，可公开重构（由 $(x_j, y_j)$ 构造）
-- 消零多项式 $z(x)$，由点集构造
-- 证明 $\pi = q(s) \cdot G_1$
+To verify the correctness of KZG, we substitute the secret $s$:
 
-验证者可自行计算：
+$$
+f(s) - f(z) = q(s)(s - z)
+$$
 
-- $i(s) \cdot G_1$
-- $z(s) \cdot G_2$
+Therefore:
 
-最终使用配对进行验证：
+$$
+[f(s) - f(z)] \cdot G_1 = [q(s)(s - z)] \cdot G_1
+$$
+
+$$
+f(s) \cdot G_1 - f(z) \cdot G_1 = q(s) \cdot G_1 \cdot (s - z)
+$$
+
+Since $f(s) \cdot G_1 - f(z) \cdot G_1 = C - y_i \cdot G_1$, we use pairings for the final step:
+
+$$
+e(C - y_i \cdot G_1, G_2) = e(q(s) \cdot G_1 \cdot (s - x_i), G_2)
+$$
+
+$$
+= e(q(s) \cdot G_1, (s - x_i) \cdot G_2)
+$$
+
+$$
+= e(\pi, s \cdot G_2 - x_i \cdot G_2)
+$$
+
+Verification succeeds.
+
+---
+
+## Example
+
+Let’s walk through an actual example of the full KZG commitment flow using the polynomial:
+
+$$
+f(x) = 2x^2 + 3x + 1
+$$
+
+### Generating the Commitment
+
+$$
+C = 2 \cdot s^2 \cdot G_1 + 3 \cdot s \cdot G_1 + G_1
+$$
+
+Here, $s^2 \cdot G_1$ and $s \cdot G_1$ are precomputed public values.
+
+### Generating the Proof
+
+Pick a point $x_i = 1$ and evaluate:
+
+$$
+f(1) = 2(1)^2 + 3(1) + 1 = 6
+$$
+
+We want to prove:
+
+$$
+f(1) = 6
+$$
+
+without revealing the full polynomial. Construct:
+
+$$
+g(x) = f(x) - 6 = 2x^2 + 3x + 1 - 6 = 2x^2 + 3x - 5
+$$
+
+Now divide $g(x) = 2x^2 + 3x - 5$ by $(x - 1)$ using polynomial division. Here's a manual calculation:
+
+```text
+         2x + 5
+       ------------
+x - 1 | 2x^2 + 3x - 5
+        - (2x^2 - 2x)
+        -------------
+               5x - 5
+           - (5x - 5)
+           -----------
+                    0
+```
+
+So we get:
+
+$$
+q(x) = 2x + 5
+$$
+
+The proof is then:
+
+$$
+\pi = 2 \cdot s \cdot G_1 + 5 \cdot G_1
+$$
+
+Finally, publish the original point $(1, 6)$, the commitment $C$, and the proof $\pi$, and verification can proceed.
+
+---
+
+## Batch Proof
+
+KZG commitments not only support single-point proofs but also allow a **single proof for multiple points**. That is, a single group element can prove that multiple points $(x_0, y_0), (x_1, y_1), \dots, (x_k, y_k)$ are valid evaluations of the polynomial $f(x)$.
+
+First, construct an **interpolation polynomial** $i(x)$ such that:
+
+$$
+i(x_j) = y_j \quad \text{for all } j \in \{0, 1, \dots, k\}
+$$
+
+This can be done via Lagrange interpolation. The degree of $i(x)$ is strictly less than $k$. Then construct the quotient polynomial:
+
+$$
+q(x) = \frac{g(x)}{z(x)}
+$$
+
+Where $g(x) = f(x) - i(x)$, and $z(x)$ is the **zero polynomial**:
+
+$$
+z(x) = (x - x_0)(x - x_1)\dots(x - x_k)
+$$
+
+Here, $g(x)$ is divisible by $z(x)$, because at each $x_j$, $f(x_j) = i(x_j)$, so $g(x_j) = 0$ and $z(x_j) = 0$. As in the single-point case, we conclude $r = 0$.
+
+Now commit to $q(s)$:
+
+$$
+\pi = q(s) \cdot G_1
+$$
+
+This $\pi$ is the **batch proof** for KZG. The prover then reveals:
+
+* $(x_0, y_0), (x_1, y_1), \dots, (x_k, y_k)$
+* The proof $\pi$
+* The commitment $C$
+
+The verifier holds:
+
+* The commitment $C = f(s) \cdot G_1$
+* The interpolation polynomial $i(x)$ (reconstructed from the data points)
+* The zero polynomial $z(x)$ (from the same points)
+* The proof $\pi = q(s) \cdot G_1$
+
+The verifier computes:
+
+* $i(s) \cdot G_1$
+* $z(s) \cdot G_2$
+
+Then verifies using pairing:
 
 $$
 e(C - i(s) \cdot G_1, G_2) \stackrel{?}{=} e(\pi, z(s) \cdot G_2)
 $$
 
-成立即表明所有点值均为真实可信，且多项式的承诺与它们兼容。
+If it holds, all point evaluations are valid and consistent with the committed polynomial.
 
-在实际应用中，我们使用更为高效的 [aSVC（Aggregatable Subvector Commitment）](https://alinush.github.io/2020/05/06/aggregatable-subvector-commitments-for-stateless-cryptocurrencies.html#constant-sized-i-subvector-proofs)方案，它能够实现批量证明中的单点验证，这在数据可用性采用中十分有用，极大地减少带宽和存储。
+---
+
+In practice, we use a more efficient scheme called [aSVC (Aggregatable Subvector Commitment)](https://alinush.github.io/2020/05/06/aggregatable-subvector-commitments-for-stateless-cryptocurrencies.html#constant-sized-i-subvector-proofs), which enables **batch proofs that support individual queries**. This is particularly useful in **data availability** settings, where it greatly reduces bandwidth and storage overhead.
