@@ -8,13 +8,13 @@ hero:
   tagline: Simple. Comprehensive. Timely.
   actions:
     - theme: brand
-      text: guide
+      text: Guide
       link: /guide/concept
     - theme: alt
-      text: advanced
+      text: Advanced
       link: /advanced/network/das-network-design
     - theme: alt
-      text: research
+      text: Research
       link: /research/security/security-assumptions
 
 features:
