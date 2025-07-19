@@ -32,32 +32,36 @@ export const en = defineConfig({
 function nav(): DefaultTheme.NavItem[] {
   return [
     {
-      text: 'guide',
+      text: 'Guide',
       link: '/guide/concept',
       activeMatch: '/guide/'
     },
     {
-      text: 'advanced',
+      text: 'Advanced',
       link: '/advanced/network/das-network-design',
       activeMatch: '/advanced/'
     },
     {
-      text: 'research',
+      text: 'Research',
       link: '/research/getting-started',
       activeMatch: '/research/'
     },
+    {
+      text: 'Donate',
+      link: 'https://eth100.wtf/donate'
+    }
   ]
 }
 
 function sidebarGuide(): DefaultTheme.SidebarItem[] {
   return [
     {
-      text: '指南',
+      text: 'Guide',
       collapsed: false,
       items: [
-        { text: '概念', link: '/concept' },
-        { text: '编码', link: '/encoding' },
-        { text: '应用', link: '/application' }
+        { text: 'Concepts', link: '/concept' },
+        { text: 'Encoding', link: '/encoding' },
+        { text: 'Applications', link: '/application' }
       ]
     }
   ]
@@ -66,35 +70,35 @@ function sidebarGuide(): DefaultTheme.SidebarItem[] {
 function sidebarAdvanced(): DefaultTheme.SidebarItem[] {
   return [
     {
-      text: '进阶',
+      text: 'Advanced',
       collapsed: false,
       items: [
         {
-          text: '网络',
+          text: 'Network',
           items: [
-            { text: 'DAS 网络设计', link: '/network/das-network-design' },
+            { text: 'DAS Network Design', link: '/network/das-network-design' },
             { text: 'DHT', link: '/network/dht' },
             { text: 'Gossip', link: '/network/gossip' }
           ]
         },
         {
-          text: '编码',
+          text: 'Cryptography',
           items: [
-            { text: 'Reed-Solomon Code', link: '/encoding/reed-solomon-code' },
-            { text: '数据矩阵', link: '/encoding/data-matrix' },
-            { text: '分布式生成', link: '/encoding/distributed-generation' }
+            { text: 'Elliptic Curve Cryptography', link: '/cryptography/elliptic-curve-cryptography' },
+            { text: 'Elliptic Curve Applications', link: '/cryptography/elliptic-curve-applications' },
+            { text: 'Elliptic Curve Pairing', link: '/cryptography/elliptic-curve-pairing' },
+            { text: 'Weil Pairing', link: '/cryptography/weil-pairing' },
+            { text: 'Tate Pairing', link: '/cryptography/tate-pairing' },
+            { text: 'Miller Algorithm', link: '/cryptography/miller-algorithm' },
+            { text: 'Polynomial Commitment', link: '/cryptography/polynomial-commitment' }
           ]
         },
         {
-          text: '密码学',
+          text: 'Encoding',
           items: [
-            { text: '椭圆曲线加密', link: '/cryptography/elliptic-curve-cryptography' },
-            { text: '椭圆曲线应用', link: '/cryptography/elliptic-curve-applications' },
-            { text: '椭圆曲线配对', link: '/cryptography/elliptic-curve-pairing' },
-            { text: 'Weil 配对', link: '/cryptography/weil-pairing' },
-            { text: 'Tate 配对', link: '/cryptography/tate-pairing' },
-            { text: 'Miller 算法', link: '/cryptography/miller-algorithm' },
-            { text: '多项式承诺', link: '/cryptography/polynomial-commitment' }
+            { text: 'Reed-Solomon Code', link: '/encoding/reed-solomon-code' },
+            { text: 'Data Matrix', link: '/encoding/data-matrix' },
+            { text: 'Distributed Generation', link: '/encoding/distributed-generation' }
           ]
         },
         { text: 'PeerDAS', link: '/peerdas' }
@@ -106,30 +110,30 @@ function sidebarAdvanced(): DefaultTheme.SidebarItem[] {
 function sidebarResearch(): DefaultTheme.SidebarItem[] {
   return [
     {
-      text: '研究',
+      text: 'Research',
       collapsed: false,
       items: [
         {
-          text: '入门',
-          link: '/research/getting-started'
+          text: 'Getting Started',
+          link: '/getting-started'
         },
         {
-          text: '安全性',
+          text: 'Security',
           items: [
-            { text: '安全假设', link: '/security/security-assumptions' },
-            { text: '威胁模型', link: '/security/threat-model' }
+            { text: 'Security Assumptions', link: '/security/security-assumptions' },
+            { text: 'Threat Model', link: '/security/threat-model' }
           ]
         },
         {
-          text: '方案设计',
+          text: 'Design',
           items: [
-            { text: '网络拓扑', link: '/design/network-topology' },
-            { text: '数据分发', link: '/design/data-dissemination' },
-            { text: '采样策略', link: '/design/sampling-strategies' }
+            { text: 'Network Topology', link: '/design/network-topology' },
+            { text: 'Data Dissemination', link: '/design/data-dissemination' },
+            { text: 'Sampling Strategies', link: '/design/sampling-strategies' }
           ]
         },
         {
-          text: '密码学和编码',
+          text: 'Cryptography & Coding',
           items: [
             { text: 'RLNC', link: '/cryptography-and-coding/rlnc' }
           ]
