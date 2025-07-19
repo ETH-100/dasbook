@@ -59,9 +59,9 @@ function sidebarGuide(): DefaultTheme.SidebarItem[] {
       text: 'Guide',
       collapsed: false,
       items: [
-        { text: 'Concepts', link: '/concept' },
-        { text: 'Encoding', link: '/encoding' },
-        { text: 'Applications', link: '/application' }
+        { text: 'Concepts', link: 'concept' },
+        { text: 'Encoding', link: 'encoding' },
+        { text: 'Applications', link: 'application' }
       ]
     }
   ]
@@ -76,32 +76,32 @@ function sidebarAdvanced(): DefaultTheme.SidebarItem[] {
         {
           text: 'Network',
           items: [
-            { text: 'DAS Network Design', link: '/network/das-network-design' },
-            { text: 'DHT', link: '/network/dht' },
-            { text: 'Gossip', link: '/network/gossip' }
+            { text: 'DAS Network Design', link: 'network/das-network-design' },
+            { text: 'DHT', link: 'network/dht' },
+            { text: 'Gossip', link: 'network/gossip' }
           ]
         },
         {
           text: 'Cryptography',
           items: [
-            { text: 'Elliptic Curve Cryptography', link: '/cryptography/elliptic-curve-cryptography' },
-            { text: 'Elliptic Curve Applications', link: '/cryptography/elliptic-curve-applications' },
-            { text: 'Elliptic Curve Pairing', link: '/cryptography/elliptic-curve-pairing' },
-            { text: 'Weil Pairing', link: '/cryptography/weil-pairing' },
-            { text: 'Tate Pairing', link: '/cryptography/tate-pairing' },
-            { text: 'Miller Algorithm', link: '/cryptography/miller-algorithm' },
-            { text: 'Polynomial Commitment', link: '/cryptography/polynomial-commitment' }
+            { text: 'Elliptic Curve Cryptography', link: 'cryptography/elliptic-curve-cryptography' },
+            { text: 'Elliptic Curve Applications', link: 'cryptography/elliptic-curve-applications' },
+            { text: 'Elliptic Curve Pairing', link: 'cryptography/elliptic-curve-pairing' },
+            { text: 'Weil Pairing', link: 'cryptography/weil-pairing' },
+            { text: 'Tate Pairing', link: 'cryptography/tate-pairing' },
+            { text: 'Miller Algorithm', link: 'cryptography/miller-algorithm' },
+            { text: 'Polynomial Commitment', link: 'cryptography/polynomial-commitment' }
           ]
         },
         {
           text: 'Encoding',
           items: [
-            { text: 'Reed-Solomon Code', link: '/encoding/reed-solomon-code' },
-            { text: 'Data Matrix', link: '/encoding/data-matrix' },
-            { text: 'Distributed Generation', link: '/encoding/distributed-generation' }
+            { text: 'Reed-Solomon Code', link: 'encoding/reed-solomon-code' },
+            { text: 'Data Matrix', link: 'encoding/data-matrix' },
+            { text: 'Distributed Generation', link: 'encoding/distributed-generation' }
           ]
         },
-        { text: 'PeerDAS', link: '/peerdas' }
+        { text: 'PeerDAS', link: 'peerdas' }
       ]
     }
   ]
@@ -115,27 +115,27 @@ function sidebarResearch(): DefaultTheme.SidebarItem[] {
       items: [
         {
           text: 'Getting Started',
-          link: '/getting-started'
+          link: 'getting-started'
         },
         {
           text: 'Security',
           items: [
-            { text: 'Security Assumptions', link: '/security/security-assumptions' },
-            { text: 'Threat Model', link: '/security/threat-model' }
+            { text: 'Security Assumptions', link: 'security/security-assumptions' },
+            { text: 'Threat Model', link: 'security/threat-model' }
           ]
         },
         {
           text: 'Design',
           items: [
-            { text: 'Network Topology', link: '/design/network-topology' },
-            { text: 'Data Dissemination', link: '/design/data-dissemination' },
-            { text: 'Sampling Strategies', link: '/design/sampling-strategies' }
+            { text: 'Network Topology', link: 'design/network-topology' },
+            { text: 'Data Dissemination', link: 'design/data-dissemination' },
+            { text: 'Sampling Strategies', link: 'design/sampling-strategies' }
           ]
         },
         {
           text: 'Cryptography & Coding',
           items: [
-            { text: 'RLNC', link: '/cryptography-and-coding/rlnc' }
+            { text: 'RLNC', link: 'cryptography-and-coding/rlnc' }
           ]
         }
       ]
