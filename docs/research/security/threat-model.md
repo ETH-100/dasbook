@@ -1,47 +1,67 @@
-引入数据可用性抽样后，存在两种类型的威胁，一种是 DA 层原本存在的威胁模型，另一种是攻击者尝试新的手段来放大原系统的威胁，从而破坏链的安全或活性。
+# Threat Model
 
-## 选择性披露攻击（Selective Share Disclosure）
+After introducing Data Availability Sampling (DAS), two types of threats emerge:
 
-选择性披露攻击是针对 DAS 的高级数据扣留策略。在此攻击中，攻击者刻意隐藏区块的一部分数据，使得网络无法重构区块，但又针对特定节点选择性地回应抽样请求。这需要攻击者通过识别哪些请求来自同一受害者，从而只对目标节点一直“友好”回应，而对网络其余部分扣留数据。这使得受害者在毫无察觉的情况下，被欺骗从而接受数据不可用的区块。
+1. Those inherent to the DA layer itself, and
+2. **Amplified threats**, where attackers exploit DAS to exacerbate existing protocol vulnerabilities, ultimately undermining chain security or liveness.
 
-## 数据扣留攻击（Data Withholding Attack）
+## **Selective Share Disclosure Attack**
 
-广义上的数据扣留攻击本身就作为 DAS 需要解决的问题之一，即攻击者通过隐藏数据影响区块链的安全性和活性。在 DAS 中，攻击者在采样过程中诚实地向采样节点提供样本，采样节点判断数据是可用的。采样完成后，攻击者隐藏数据，那么同样可能导致数据不可用。
+Selective share disclosure is an advanced **data withholding strategy** targeting DAS. In this attack, an adversary intentionally withholds a portion of the block data, rendering it unreconstructable by the network, **while selectively responding to sampling requests from targeted nodes**. The attacker must identify which requests originate from the same victim and respond only to them while withholding data from the rest of the network. As a result, the victim node is **tricked into accepting an unavailable block** without realizing it has been selectively served.
 
-这种狭义的数据扣留攻击需要满足：
+## **Data Withholding Attack**
 
-- 诚实节点缺乏副本；
-- 采样节点保存的样本不具备可访问性。
+Broadly speaking, data withholding is one of the core threats that DAS is designed to mitigate: an adversary hides parts of the data to compromise the **security or liveness** of the blockchain.
 
-如 DHT 网络遭遇规模化的女巫攻击，从而使得部分数据被攻击者控制。
+In a **narrower sense**, a data withholding attack occurs when the adversary **acts honestly during sampling**, allowing clients to verify availability, but **hides the data afterward**—ultimately causing the data to be unavailable.
 
-## Sybil 攻击
+Such an attack is only successful if:
 
-Sybil 攻击是分布式网络中最普遍的威胁之一，指单个对手伪造出大量虚假身份参与网络，从而影响协议运行。
+* Honest nodes **lack redundancy** (i.e., do not store the full data set);
+* Sampled fragments **are not retained** or **are inaccessible** after sampling.
 
-在 DAS 背景下，Sybil 攻击者可以通过填充受害者的邻居节点，操控其采样结果，实施选择性披露攻击和数据扣留攻击。
+This scenario becomes especially dangerous in DHT networks when a large-scale **Sybil attack** enables adversaries to control significant portions of the data space.
 
-攻击者还可以占满还能通过占据网络资源（带宽、连接槽位）来边缘化诚实节点。在 DHT 中，攻击者还可以劫持查询路径，延迟相应、不响应、返回女巫节点或实施数据扣留攻击；或直接挤占存储位置从而操控采样，即密钥空间攻击。在 Gossip 中，攻击者可以形成对子网的  Eclipse 攻击。
+## **Sybil Attack**
 
-在特定的网络拓扑设计下，对 Sybil 攻击的防范可能会比较困难。即便是一定程度上增加了身份成本，相对于区块链共识攻击成本而言也非常小（当然我们也可以将区块链验证人作为骨干网络）。
+Sybil attacks are among the most prevalent threats in distributed networks. An adversary forges many fake identities to manipulate the protocol.
 
-另一方面，由于攻击成本低，女巫节点可以长时间伪装诚实节点，并获得较好的评分，最终实施攻击。
+In the DAS context, a Sybil attacker may:
 
-## **事前重组攻击（Ex-ante reorgs）**
+* Fill a victim's neighbor set with malicious nodes to manipulate sampling results, facilitating **selective disclosure** and **data withholding**;
+* Consume network resources (bandwidth, connection slots) to marginalize honest nodes;
+* In DHT-based designs:
 
- 事前重组攻击是区块链中一种已知的复杂的共识层攻击，原指攻击者预先秘密构建一条替代链并择机发布，使已有的区块被重组回滚，攻击链成为规范链。
+  * Hijack routing paths (drop, delay, or reroute requests to other Sybil nodes);
+  * Withhold data (classic data withholding);
+  * Perform keyspace occupation attacks to control sampling;
+* In Gossip-based designs:
 
-在数据可用性层介入共识后，该攻击出现了新的变种：“部分数据发布”的事前重组。攻击者利用 DAS 抽样的滞后性，提前布局多个包含不完整数据的连续区块，诱导部分验证者错误投票，从而实现重组。典型流程为：
+  * Launch **eclipse attacks** against specific subnets.
 
-[图：攻击示意图]
+Depending on the network topology, **mitigating Sybil attacks can be challenging**. Even increasing identity costs (e.g., PoW or stake) may be insufficient compared to consensus-layer attack costs—though using blockchain validators as a trusted backbone can help.
 
-- 攻击者拥有一定比例验证者 $\beta$ ，不必过半但需显著权重。在其提议的区块 $B$ 中，只发布部分数据但广播完整区块头。
-- 很多诚实验证者对 $B$ 执行子网抽样或简化 DAS ，由于攻击者技巧性地选择了扣留片段，使得最多 ****$\delta$ ****比例的诚实者（加上攻击者自己的验证者）都认为 $B$ 数据可用并投票确认。
-- 攻击者继续构建后续区块 $C,D ...$，在每一轮都重复这一策略，使其链分叉上每个区块都得到 $\delta+\beta$ 票支持。
-- 当出现诚实提议者想要提出替代区块（发现之前链数据不完整）时，攻击者立即公布此前扣留的数据，使原链上的块瞬间变为“可用”且已获得足够投票，从而挤压掉诚实链候选——即完成一次重组。
+Moreover, **Sybil nodes may behave honestly for extended periods**, accumulating high trust scores before launching an attack—**delayed betrayal**.
 
-相比传统事前重组，这种攻击利用了 DAS 中的时间差和容错率 $\delta$ ，使攻击者更有效地积累优势。换言之，DAS 如果抽样不充分，攻击者可每个区块多争取到 $\delta$ 份本不应有的诚实者投票，提高重组链胜出的概率。事前重组攻击被 DAS 放大，使得攻击者更具优势，直接威胁区块链共识的安全性和最终性。成功的攻击将导致合法链被恶意链取代，造成双花和交易最终性的破坏。
+## **Ex-Ante Reorganizations**
 
-在 DAS 领域，要想成功执行事前重组攻击的必要非充分条件是不充分的采样，例如 Trailing Fork‑Choice 下仅使用子网采样。
+An **ex-ante reorg** is a well-known class of consensus-layer attacks where the adversary privately builds an alternative chain and publishes it strategically to overwrite the canonical chain.
 
-[草稿](https://www.notion.so/211c1565878880149e2df2d067ad5a79?pvs=21)
+With DAS, this attack evolves into a **“partial data publishing” ex-ante reorg**. The attacker exploits DAS’s **sampling lag** and **incompleteness**, constructing a sequence of blocks with missing data that mislead validators into mistakenly finalizing an invalid chain.
+
+Typical attack steps:
+
+![image.png](/shared/ex-ante-reorgs.png)
+
+1. The attacker controls a fraction of validators $\beta$, not necessarily a majority but with significant weight. In their proposed block $B$, they **withhold parts of the data**, but still **broadcast a valid block header**.
+2. A portion of honest validators sample $B$ using light or partial DAS. By **carefully selecting which data to withhold**, the attacker ensures that **up to $\delta$** of honest validators mistakenly believe $B$ is available and vote to finalize it.
+3. The attacker **continues building blocks** $C$, $D$, etc., using the same tactic, ensuring each block receives **$\delta + \beta$** voting support.
+4. When an honest proposer attempts to introduce a competing fork (after discovering the original chain is unavailable), the attacker **reveals the withheld data**, making the previous blocks appear valid and already finalized. The honest fork gets discarded, and the attacker’s fork wins.
+
+Compared to classic reorgs, this variation **exploits DAS-specific timing** and **error tolerance $\delta$**, allowing the attacker to **accumulate excess votes per block** that wouldn’t be possible under full availability verification. The result is an amplified risk of reorganization and a serious **threat to chain safety and finality**. A successful attack leads to the replacement of an honest chain by a malicious one.
+
+## References
+
+* [**Eth2book: LMD Ghost Consensus**](https://eth2book.info/latest/part2/consensus/lmd_ghost/)
+* [**Recent Latest Message Driven GHOST: Balancing Dynamic Availability With Asynchrony Resilience**](https://arxiv.org/pdf/2302.11326)
+* [**DAS Fork-Choice**](https://ethresear.ch/t/das-fork-choice/19578)

@@ -1,44 +1,52 @@
-## 安全性定义与分类
+# Security Assumptions
 
-在讨论 DAS 安全性时，实际上包含了两部分内容：
+## Security Definitions and Categories
 
-- DAS 作为加密原语的全局安全性： 即将 DAS 作为一个单独的模块，可以从 UC 安全框架的角度证明其安全性。
-- 共识采样的整体安全性： 即在采样 DAS 的链、Rollup 的环境下，DAS 对整体安全的影响。
+When discussing the security of DAS, we are essentially referring to two interrelated aspects:
 
-这是因为安全性定义中，DAS 并不独立存在，而是出于某种环境下。因此我们需要确保 DAS 作为一个加密原语本身的全局安全性，以及环境在引入 DAS 后本身的安全性。
+* **Global security of DAS as a cryptographic primitive**: Treating DAS as a standalone module, its security can be analyzed under the UC (Universal Composability) framework.
+* **System-wide security of consensus with DAS sampling**: Assessing how DAS affects the overall security when integrated into a blockchain or Rollup environment.
 
-### 环境影响
+This is because DAS never operates in isolation—it always functions within a broader environment. Therefore, it is necessary to ensure both the **global security of DAS itself** and the **security of the surrounding system once DAS is introduced**.
 
-DA layer 与以前的模块具有根本性的不同，环境在引入 DAS 的安全性我们可以分为三个方面：整体安全性、链活性和客户端活性。
+### Environmental Impact
 
-- **整体安全性（global safety）**：在 DAS 机制下，整体安全性指“不可用的数据最终会被几乎所有节点识别并拒绝”这一属性。换言之，若区块数据是不可用的，除少数节点外，所有验证者都会发现并拒绝该区块，从而保证链上包含的区块必定具备数据可用性。这保证了即便少数节点被攻击者欺骗，被攻击的故障链也无法成为最终规范链。
-- **链活性（chain liveness）**：指区块链能够持续产生新块并最终达成共识确认，例如不断有新区块达成最终性。这是将区块链视为黑盒，站在第三方观察者的角度，总是能够每隔一段时间观察到新的有效区块被最终确定。
-- **客户端活性（client liveness）**：指特定客户端节点能够定期确认到新交易。这是从个体角度定义的安全性，即一个验证者或轻节点能够持续观察到有效的最终区块，并可成功确认其中交易。
+The DA layer introduces fundamental changes compared to previous blockchain modules. Once DAS is integrated, the security of the surrounding environment can be evaluated from three perspectives: **global safety**, **chain liveness**, and **client liveness**.
 
-在未引入 DAS 的经典区块链中，客户端活性和链活性几乎是等价的，除非客户端遭遇日蚀攻击。这源于区块链不接受引起歧义的外部输入的封闭性，例如不在共识层引入预言机，而是置于应用层中。在引入 DAS 后，同时引入了不可归因的合法分叉，成为新的安全考量。
+* **Global safety**: Under DAS, global safety refers to the guarantee that "unavailable data will be rejected by nearly all nodes." In other words, if block data is unavailable, almost all validators (except for a few compromised nodes) will detect and reject the block. This ensures that blocks included on-chain are data-available, and prevents adversaries from pushing unavailable blocks onto the canonical chain.
+* **Chain liveness**: The ability of the blockchain to continue producing new blocks and eventually reach consensus. From the perspective of an external observer, the chain continues to finalize new blocks over time.
+* **Client liveness**: The ability of an individual client (such as a validator or light node) to confirm new transactions over time. This refers to whether a single client can continuously see and verify finalized blocks that contain their transactions.
 
-### **数据可用性层全局安全性（DA layer global security）**
+In classical blockchains without DAS, **client liveness is nearly equivalent to chain liveness**, unless the client is under an eclipse attack. This is because traditional blockchains avoid external ambiguity (e.g., oracle inputs are confined to the application layer). With DAS, however, it introduces **unattributable but legitimate forks**, which become new concerns for system security.
 
-简单点说，DAL 使得客户端活性和经典区块链产出了微妙的差别。对于无 DAS 的链来说，出于网络因素，节点之间有可能会产生状态差异，但这是可归因的合法分叉，最终在整体安全性的框架下收敛到一致。引入 DAS 后，特定的节点有可能对数据可用性产生差异化的主观见解，产生了无法归因的状态差异。
+### **Global Security of the DA Layer**
 
-如果不考虑环境因素， 理论上 DAL 可以抵御 51% 的攻击，我们当然可以称之为安全的，但这在应用到环境后显然会产生问题。为了使得 DAL 在复杂环境下保持安全性，就需要确保 DAL 无论在什么环境下，都无法被观察出与协议预期的偏离。无论对于使用 DAL 的本链，还是建立在本链上的 Rollup 都至关重要。我们需要重新定义 DAL 安全性，在环境的整体安全性、链活性和客户端活性之间作出权衡。
+Put simply, the DA layer (DAL) introduces a subtle distinction between client liveness and classical block production. Without DAS, any divergence in node state due to network issues can usually be traced and resolved, eventually achieving consensus. With DAS, however, nodes may form **subjective and untraceable views** on data availability, leading to inconsistencies that are no longer attributable.
 
-## 安全假设
+If we ignore environmental constraints, in theory the DAL can be 51% secure, which sounds robust. However, when deployed in a real-world environment, such assumptions are insufficient. A secure DAL must remain indistinguishable from a correctly functioning protocol under any environmental conditions. This is crucial not only for the host chain using the DAL, but also for Rollups and other systems that depend on it.
 
-### 采样请求不可链接（unlinkability）
+Thus, we must **redefine DAL security** in light of its effects on global safety, chain liveness, and client liveness, and seek a balance among them.
 
-“不可链接性”（Unlinkability）是指攻击者无法将多个交互或请求与同一实体关联起来。换言之，不同的数据请求在观察者看来是彼此无关的，无法被链接到同一个采样客户端身份。在 DAS 中，不可链接性具有关键作用，它能防止选择性数据披露攻击。这种请求和实体之间的关联可能源于多方面，例如时间特征、地理特征、身份识别等等。
+## Security Assumptions
 
-例如在标准网络模型下，恶意数据发布者可以只响应最初若干轻节点采样请求，之后对后续请求拒绝提供数据，从而导致在数据不可用的情况下欺骗前期采样者误认为数据是可用的。这种请求和实体之间的链接主要源于时间特征上，攻击者还可以通过身份来关联。这通常需要引入匿名通信网络或混合网络（如 Tor、Nym 等）来隐藏请求源。很多研究正在探索使用 mixnet 实现 DAS 通信匿名化，以满足这一理想假设。这种类型的方案满足理想假设，攻击者无法针对特定节点定制响应策略，从而保障单个节点几乎不可能被各个击破，但成本通常很高。
+### **Unlinkability of Sampling Requests**
 
-### 最小诚实采样者假设
+**Unlinkability** refers to the inability of an attacker to associate multiple interactions or requests with the same client. In DAS, this property is critical to prevent **selective data disclosure attacks**, where an adversary behaves honestly for some clients but maliciously toward others.
 
-我们将 DAS 网络抽象为数据提供者和采样者，采样者在采样同时保存数据。如果采样者数量不足，无法保存足以恢复原始数据的样本，恶意数据提供者可以在采样完成后拒绝提供数据，从而导致被采样者认为可用的数据丢失。
+Correlations may arise through temporal patterns, geographic signals, or identity fingerprints. For example, a malicious publisher might respond to early sampling requests but ignore later ones, misleading initial clients into believing the data is available. To prevent this, anonymized communication channels such as **mixnets (e.g., Tor, Nym)** are required to obscure request origins.
 
-这个假设确保即使单个采样节点只检查少量数据，多节点协作下仍覆盖了整个区块的数据空间。如果诚实采样参与度不足，攻击者可能隐藏未被采样到的数据。
+Many researchers are exploring the use of mixnets to anonymize DAS communication, aligning with this ideal assumption. These mechanisms prevent adversaries from crafting customized response strategies per node, thereby ensuring that **no single node can be singled out or selectively deceived**. However, this usually comes at high implementation costs.
 
-### 网络同步与连通假设
+### **Minimal Honest Sampler Assumption**
 
-在理想模型中，采样节点在同一时间段内进行采样，这确保了不可链接性。同时，数据实际上在采样的同时保存在采样节点中，这要求这些数据是可以被访问的，以确保节点都可以利用网络中的数据进行重构。另外，如节点之间无法连同，则可能带来采样失败，使得诚实节点误判数据可用性，从而影响客户端活性。
+We abstract the DAS network as comprising **data providers** and **samplers**. Samplers not only verify data availability but also **store the sampled fragments**. If too few honest samplers participate, it becomes possible for a malicious provider to serve data only during the sampling phase and then refuse further access, leading to **data loss post-sampling**.
 
-我们通常假设网络具有同步或准同步特性，在有限延迟内可以传输数据。
+This assumption ensures that even if each sampler only checks a small portion of the data, collectively the honest nodes **cover the entire data space**. Without this, adversaries can hide unqueried portions of the data from the network.
+
+### **Network Synchrony and Connectivity Assumption**
+
+In idealized models, sampling is assumed to occur **synchronously** across nodes, which supports unlinkability. Furthermore, since sampled data must be retrievable, samplers are assumed to **store their samples**, implying the data is still available somewhere on the network.
+
+If nodes are **disconnected or partitioned**, it can cause honest nodes to misjudge availability (e.g., failing to reconstruct despite data being present elsewhere), thus compromising **client liveness**.
+
+Hence, the network is generally assumed to have **synchronous or quasi-synchronous properties**, allowing data to propagate within a bounded delay.

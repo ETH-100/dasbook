@@ -43,7 +43,7 @@ function nav(): DefaultTheme.NavItem[] {
     },
     {
       text: 'research',
-      link: '/research/security/security-assumptions',
+      link: '/research/getting-started',
       activeMatch: '/research/'
     },
   ]
@@ -109,6 +109,10 @@ function sidebarResearch(): DefaultTheme.SidebarItem[] {
       text: '研究',
       collapsed: false,
       items: [
+        {
+          text: '入门',
+          link: '/research/getting-started'
+        },
         {
           text: '安全性',
           items: [

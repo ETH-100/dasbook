@@ -1,74 +1,90 @@
-数据可用性层在理论上具有很强的可扩展性，但首先需要解决的问题是如何将数据分散到对等点，并从对等点获取数据。Gossip 和 DHT 是两种典型的点对点网络协议，其中 DHT 作为数据传播的点对点网络已被广泛使用多年，而 Gossip 协议已在区块链底层中得到了广泛应用。然而，无论 Gossip 还是 DHT 都并非专门为 DAS 而设计，存在不同的优势和弊端，而 DAS 网络拓扑的设计需要综合衡量安全性和吞吐量。
+
+
+# Network Topology Design
+
+While the data availability (DA) layer is theoretically highly scalable, the primary challenge lies in how to distribute data to peers and retrieve it from them. Gossip and DHT are two typical peer-to-peer (P2P) protocols. DHT has long been used for data propagation in decentralized systems, while Gossip protocols are widely adopted in blockchain infrastructures. However, neither was specifically designed for DAS, and each presents trade-offs. Designing DAS network topologies thus requires balancing **security** and **throughput**.
 
 ## Gossip
 
-Gossip 协议在默认条件下，虽然同样易遭受各种攻击，但相比 DHT 有突出的结构化优势，例如多路径冗余传播，避免了单点劫持；邻居不依赖密钥，避免了视野污染；容忍一定的恶意节点。另外，Gossip 具有较快的传播速度，在以太坊的 GossipSub 网络中，重要消息能在[数秒内](https://ethresear.ch/t/gossipsub-message-propagation-latency/19982/1)传播到成千上万的节点。
+Despite vulnerabilities under default conditions, Gossip protocols offer structured advantages over DHT. These include **multi-path redundancy**, which avoids single-point hijacking; **keyless neighbor selection**, reducing vision pollution; and **tolerance of some malicious nodes**. Gossip also enables rapid message propagation: in Ethereum's GossipSub network, important messages can reach thousands of nodes in [just a few seconds](https://ethresear.ch/t/gossipsub-message-propagation-latency/19982/1).
 
-但与此同时，它也带来了不可忽视的开销问题。每个节点需将数据广播至多个邻居，导致 3 到 8 倍的带宽放大。以 1MB 的原始数据为例，经过纠删码扩展为 2MB 后，乘以放大因子，最终可能消耗 16MB 的网络带宽，在 DAS 这样高频、海量数据传播的环境中成为系统扩展性的主要瓶颈之一。
+However, this comes at a cost: **significant bandwidth overhead**. Each node broadcasts messages to multiple peers, leading to 3–8× amplification. For example, a 1MB message expanded via erasure coding to 2MB could ultimately consume 16MB of bandwidth—one of the major bottlenecks in DAS's high-frequency, high-volume setting.
 
-这一问题，可以从减少冗余拷贝和提高传播路径效率两个方向入手。在实际协议中，GossipSub 被设计为双层架构，以区别核心节点和外围的不同流量控制。核心节点之间构成一个稳定的网格结构（mesh），彼此保持双向连接，节点之间高优先级、低延迟地直接推送完整消息，这被称为 Eager Push；而对于 mesh 之外的节点，则采用更经济的“惰性拉取”机制进行传播。
+Two directions help mitigate this: reducing redundancy and improving propagation path efficiency. GossipSub adopts a **dual-layer architecture**: core nodes form a stable **mesh network** with direct, high-priority connections using **eager push**, while non-mesh nodes rely on more economic **lazy pull**.
 
-这一机制以 IHAVE/IWANT 协议对为基础：一个节点收到消息后，并不立即向所有邻居转发完整数据，而是先向部分非 mesh 邻居发送 “我有这些消息” 的通告（IHAVE），只有在接收方回应 “我想要这些消息” 请求（IWANT）时，才真正发送数据。这种方式显著减少了带宽浪费。根据实测，大约需要发送 100 条 IHAVE 才会触发 1 条 IWANT，这显示了按需拉取的高效性。
+The pull mechanism is based on the **IHAVE/IWANT** pair. Instead of forwarding full messages to all neighbors, a node sends “IHAVE” notices to non-mesh neighbors. Only when a peer replies with “IWANT” does it send the actual data. This strategy drastically reduces waste. In practice, roughly 100 IHAVE messages are sent for every 1 IWANT, demonstrating its efficiency.
 
-但与此同时，IHAVE 机制虽然相对完整数据较小，但仍然占用不少空间，并且其粒度较粗，难以适应更精细的优化。另一方面，实际上这本身属于阻塞机制，具有滞后性。在极端情况下，若消息未能通过 mesh 快速扩散，IHAVE 的延迟可能导致毫不知情的外围节点无法及时获取数据。
+Still, IHAVE consumes bandwidth and operates at coarse granularity, lacking finer control. It also introduces delay: if messages don't quickly propagate through the mesh, peripheral nodes may remain unaware for some time.
 
-GossipSub v2.0 引入了 IANNOUNCE/INEED 机制。IANNOUNCE 是一种更轻量的声明方式，取代了原本的 IHAVE 通告。相比后者，它不再携带消息摘要列表，而仅是对新消息的编号宣告，从而大幅减小带宽压力。INEED 则作为对应请求，接收方若需要某条消息，可以通过 INEED 精确索引请求。这一机制更适用于 DAS 中大量结构化数据块的传播，特别是在区块体庞大、消息分片精细的场景下。
+**GossipSub v2.0** introduces the **IANNOUNCE/INEED** mechanism as a lightweight alternative. IANNOUNCE replaces IHAVE by advertising only message IDs, not digests, dramatically reducing bandwidth. INEED is the corresponding request, allowing precise message retrieval. This mechanism is more suitable for DAS scenarios involving large block bodies and fine-grained message fragmentation.
 
-是否完全取消 IHAVE 成为新的设计权衡。尽管 IANNOUNCE 更高效，但 IHAVE 仍具有重要的安全与弹性价值：它让外围节点即使不直接连接至核心 mesh，也能持续获得网络传播状态，尤其在网络中存在敌意节点、拒绝服务或消息阻断攻击时，IHAVE 提供了替代性的防御路径。
+However, whether to completely eliminate IHAVE is a new trade-off. While IANNOUNCE is more efficient, IHAVE provides security and resiliency. It allows peripheral nodes—those not directly connected to the mesh—to still observe network propagation, which is especially valuable during DoS or censorship attacks.
 
-还有一些进一步优化传播过程的方案，一种称为 **PPPT（Push-Pull Phase Transition）** 的策略根据消息的 hop-count（跳数）动态切换传播模式。 PPPT 是针对冗余的前后期不同特征的优化，拓扑图中的“传播树”在后期大量交叉，使得离源节点越远的节点，收到的重复越多。消息传播初期采用 PUSH 模式，确保核心区域快速扩散；而当跳数超过一定阈值后，转为拉取式传播，从而降低冗余并减缓带宽压力。这种“逐层衰减”的结构有效平衡了速度与负载，特别适合如 DAS 这样传播范围广但对一致性要求极高的系统。
+Other enhancements include **PPPT (Push-Pull Phase Transition)**. PPPT dynamically switches modes based on **hop-count**. Early-stage gossip uses PUSH to ensure fast diffusion near the source, then transitions to PULL to reduce redundancy and bandwidth overhead. This **layered attenuation** structure is well-suited for DAS, where global consistency must be achieved across wide propagation domains.
 
 ## DHT
 
-相对于采用 Gossip 在播种过程中的放大因子， DHT 要更高效。另外 DHT 具有确定性的副本数量，对数级的复杂度，能够高效地适应大型网络的弹性扩展，但与此同时 DHT 也伴随着一些致命弱点。
+Compared to Gossip, DHT avoids bandwidth amplification during seeding. Its deterministic replication, logarithmic complexity, and elastic scalability make it appealing for large networks. However, DHT has **critical flaws**.
 
-从采样效率来看，DHT 效率尚可，但 Cortes-Goicoechea 等人模拟了基于 Kademlia 的 DAS 网络，发现其播种非常缓慢。播种含有 32MB 可用性数据的区块，需要 ~262,144 个碎片，在延迟非常小的乐观条件下，整个播种时间需要10-14 分钟，这比每个区块约 12 秒的目标时间长了50 **倍以上。这是由于未经修改的 Kademlia 在播种时，每个数据块都需要单独查询，并通过并发查询系数扩大，导致短时间内大量的并发。并且，这无法通过提高播种节点资源来改善，因为这种并发压力会延续到邻居节点。播种效率实际上可以从多个方面彻底改善，例如在允许播种者拥有全局路由，因此无需在播种时进行查询，而是直接联系，虽然这有可能带来播种者的中心化。
+In terms of sampling, DHT performs reasonably. Yet simulations by Cortes-Goicoechea et al. show that **Kademlia-based DAS networks seed slowly**. For a 32MB block requiring \~262,144 fragments, even under optimistic low-latency conditions, seeding can take 10–14 minutes—over 50× longer than Ethereum’s 12s block target. This is because unmodified Kademlia requires a separate lookup for each fragment, leading to immense short-term parallelism. Worse, increasing seeder resources doesn’t help, as neighbor nodes become the bottleneck.
 
-除此之外，缺乏对女巫攻击的防范能力是 DHT 最核心的问题之一。攻击者通过大量女巫节点填充某密钥空间，导致特定的数据落入该区块，随后实施数据扣留攻击。此外，在接收到查询请求时，攻击者可以采用直接抛弃请求、延迟响应等多种攻击模式。
+One mitigation is allowing seeders to use global routing, bypassing lookups. However, this introduces **centralization risk**.
 
-由于 DHT 存在的多种核心问题，复杂的 DHT 并非当前的首选。我们可以直接将节点 ID 映射到 Gossip 行/列子网中，避免了 DHT 带来的分散难题以及女巫攻击。但相对 Gossip 的流量放大，DHT 的存储机制、对大规模网络的良好支持，依然是未来 DAS 网络拓扑的方向之一，也有多个针对 DHT 的改进创意。
+Another fatal flaw is **Sybil vulnerability**. Attackers can flood a DHT region with fake nodes, capturing keyspaces and launching **data withholding attacks**. They can also drop or delay queries upon receipt.
+
+Because of these fundamental issues, **complex DHTs are not currently preferred**. Instead, DAS can map node IDs directly to **Gossip row/column subnets**, avoiding DHT’s fragmentation and Sybil issues. Still, DHT’s advantages in storage locality and scalability remain appealing, and several DHT-enhancement proposals exist.
 
 ### S/Kademlia
 
-DHT 的最大弱点在于无法抵抗女巫攻击。攻击者可以生成大量节点，占据某段密钥空间，并在其中拦截、丢弃、延迟响应，破坏整个查找过程。为了解决这个问题，Baumgart 和 Mies 在 2007 年提出了 S/Kademlia，试图在原有结构中嵌入抗攻击能力。
+DHT’s biggest weakness is Sybil resistance. Attackers can spin up many nodes to occupy parts of the keyspace and disrupt lookups. To counter this, Baumgart and Mies proposed **S/Kademlia** in 2007.
 
-第一个改进，是提高“成为节点”的门槛。他们引入了工作量证明（Proof of Work），强制节点在生成 ID 时完成特定的计算，从而增加制造海量节点的成本。但在以太坊环境中，这种方式显得笨重而低效：以太坊验证者本身就是稀缺而可信的资源。因此，研究者提出了更自然的替代：用验证者身份代替 PoW。
+The first improvement is raising the barrier to node creation. They introduce **Proof of Work (PoW)** to deter Sybil attacks. But in Ethereum, PoW is inefficient: validator identities are naturally scarce and verifiable. So, researchers propose a cleaner alternative: use **validator keys**.
 
-这种设计非常巧妙。一个节点可以拥有两个身份：一个是普通 ID，另一个是从验证者密钥生成的验证者 ID。验证者 ID 不易伪造，且难以批量生成。于是我们得到了两个逻辑网络：一个是所有节点组成的普通 DHT；另一个是只由验证者构成的“信任骨干网”。每个节点维护两套路由表，遇到异常时可自动回退至后者。
+Each node has two identities: a regular ID and a **validator ID**, derived from its validator key. Validator IDs are hard to forge or mass-produce. This results in two logical networks: a regular DHT, and a **trusted backbone** of validators. Each node maintains two routing tables and falls back to the validator layer when anomalies are detected.
 
-第二个改进，针对路径劫持问题。原始的 Kademlia 查找路径是“单线推进”的，如果中途碰上恶意节点，查询就可能被困住。为此，S/Kademlia 引入并行路径搜索（multi-path lookup）：每次查找通过 $d$ 条不相交路径同时进行，只要有一条是诚实的，最终就能抵达目标。
+The second enhancement addresses **path hijacking**. Original Kademlia follows a linear search path—one compromised hop can ruin the lookup. S/Kademlia uses **multi-path lookups**: each query travels $d$ disjoint paths simultaneously. As long as one is honest, the target can be reached.
 
-第三个设计，是“兄弟列表”（sibling list）。普通的 Kademlia 中，每个路由桶只记录一个范围内的几个远程节点。而兄弟列表则专注于某个关键点附近，记录其 XOR 距离最小的 $k$ 个节点，从而在目标附近建立一个本地高密度缓存，避免最后几步查找被堵塞。
+The third feature is the **sibling list**. Unlike Kademlia’s buckets (which store a few nodes per range), the sibling list focuses on maintaining the $k$ closest nodes (by XOR distance) to a target. This creates a **dense cache** near the target, preventing lookup stalling near the destination.
 
-以 DAS 网络为例，每个数据块的片段（如某列某行）都可通过 `hash(block_commitment, row, column)` 映射为一个确定的键值。这类键通常只需分发给其 XOR 距离最小的 $k$ 个节点。例如，选择 20 个负责节点，其中 10 个在普通网络中，10 个在验证者网络中，构成双副本保护。
+In DAS, each fragment (e.g., row/column) can be deterministically mapped via `hash(block_commitment, row, column)`. These keys are stored by the $k$ closest nodes, e.g., 10 regular + 10 validator peers, achieving **dual-replica protection**.
 
-长期运行后，节点会缓存大量可用对等体，形成一个几乎完整的“邻居知识”。多数请求可以在一跳之内完成定位，网络效率不断提高。并行路径查找还可以动态调整：一开始尝试一条路径，失败后才扩展至三条、五条，从而避免不必要的带宽浪费。
+Over time, nodes accumulate rich peer info, achieving **near one-hop resolution**. Multi-path lookups can also be staged: start with one path, expand to three or five only on failure—saving bandwidth.
 
-总体而言，S/Kademlia 提供了一种结构安全的 DHT 改进方案：通过验证者提供可信身份，通过多路径和局部密度提供鲁棒性，使其在面对大规模 Sybil 攻击时依然能够完成样本查找。
+Overall, **S/Kademlia offers a secure DHT alternative**, using validator trust, multi-path resilience, and local density to survive large-scale Sybil attacks while enabling reliable sample lookup.
 
 ### Rated List
 
-Rated List 是 Dankrad Feist 提出的一种面向 DAS 网络的 DHT 变体，尝试让节点获得更为全局的视角观察对等点的行为，构成一种近似社会图式的抗攻击机制。
+The **Rated List**, proposed by Dankrad Feist, is a DHT variant tailored for DAS. It builds a **social-graph-like** trust mechanism via local observation.
 
-在 Rated List 中，每个节点主动发起“网络爬取”过程，从自身开始，向邻居、邻居的邻居逐层收集网络中的邻居信息，记录为父子关系。最终，每个节点构建出一个包含多跳对等体的图谱，节点之间形成信任关系的社交拓扑结构。
+Each node periodically performs **network crawling**, collecting peer info from neighbors and neighbors-of-neighbors. The result is a **trust graph** with multi-hop peer relationships.
 
-之后通过对等体行为的响应评分，形成级联惩罚。由于节点在查询样本时，能根据样本索引的确定性映射，知道特定“应当”持有目标数据，如果某个对等体成功返回数据，其评分上升，反之则标记为不活跃。这些评分沿网络传播链传播，即节点的父节点也会间接受到影响。规模化的 Sybil 群将被整体标记为“劣质网络”，最终被诚实节点整体识别。
+Each peer is then **scored** based on behavior—especially during sample lookups. Since mappings are deterministic, a peer “should” possess certain data. If it responds correctly, its score rises; otherwise, it’s marked inactive. These scores cascade: a parent’s score is affected by its child’s actions. Sybil clusters get marked as **low-quality regions**, and honest nodes gradually exclude them.
 
-Rated List 无须实时更新，可以平摊到整个周期中低消耗地查询。同时评分是节点在本地执行，仅依赖于正常的查询操作，无须共识，且最终列表中的节点会收敛到双向。这些特性使得 Rated List 适合带宽敏感且结构明确的 DAS 网络。
+Rated List is **low-overhead** and **locally maintained**, requiring no consensus. Queries are part of normal operation. Peers converge toward bidirectional links. These features make it well-suited for **bandwidth-sensitive** DAS systems.
 
-## 混合网络
+## Hybrid Networks
 
-Gossip 具有更快的速度，DHT 更具弹性，但 DAS 网络需要兼而有之，因此另一种思路是混合 Gossip 和 DHT 的拓扑，创造出另一种适合 DAS 的网络。我们利用 DAS 网络独有的特性，来避免 DHT 和 Gossip 本身的弱点。
+Gossip is faster; DHT is more elastic. For DAS, **hybrids** may be ideal. By leveraging DAS-specific traits, we can avoid weaknesses of both.
 
-DAS 实际上包含了两个阶段，数据分散和抽样。其中数据分散对速度要求较高，因此使用 Gossip 来满足快速分散的需求，并通过划分子网进行流量控制。但如此一来，同行抽样需要维护不同子网的邻居，使得邻居节点覆盖所有子网。当子网数量相当大时，维护的节点数量也相应非常大（同时这也关系到子网安全）。
+DAS has two stages: **data dissemination** and **sampling**. Dissemination prioritizes speed, so Gossip is preferred, with subnet division to control traffic. But sampling requires peers to **cover all subnets**, which scales poorly as subnet count grows (and impacts subnet security).
 
-我们可以将多个子网构成的网络本身理解为 DHT 的一种变体，其中节点加入的子网类似于 DHT 中与自己最近的邻居节点集合。之所以 DAS 可以通过这种方式划分为子网，是因为 DAS 的主题 ID（Topic ID）空间是稠密的，而不像经典 DHT（如 Kademlia）的主题 ID 是不可预测的。也就是说，在 DAS 网络中我们可以确定性地将行/列子网至于相应的 bucket 中。具体来说，我们可以通过以下两种方式：
+We can treat the **network of subnets** as a **DHT variant**. Subnet membership acts like a DHT bucket. Unlike traditional Kademlia, DAS Topic IDs (row/column identifiers) are dense and predictable, allowing deterministic subnet routing.
 
-- **超立方体（Hypercube）连接**：节点连接到编号为 $C + 2^j$（对主题总数取模）的主题，并依此覆盖多个二进制位。通过改变 $j$ 的位置，可以在大网络中仅用 $\log_2 C$ 步连接至任意主题，这种方式路径短、效率高。
-- **MSB 翻转（Kademlia 风格）连接**：节点为自己当前主题编号的高位第 $j+1$ 位翻转后形成新编号，如从 $10101…$ 翻到 $11101…$，依此形成邻居。这类似 Kademlia 的“前缀差异”策略，能够快速缩短主题间 XOR 距离。
+Two routing strategies:
 
-[图片： 拓扑结构]
+* **Hypercube connections**: A node connects to topics with IDs $C + 2^j$ (mod total topics), covering log bits. In $\log\_2 C$ hops, any topic can be reached—short paths, high efficiency.
+* **MSB flipping (Kademlia-style)**: Flip the $j+1$-th most significant bit of the topic ID to derive a neighbor—e.g., $10101 \rightarrow 11101$. This mimics prefix-distance shrinking in Kademlia.
 
-这两种种方式确保任意两个主题之间的跳数为对数级，而每个节点仅需维护少量条连接，避免了维护大量子网邻居的开销，同时也避免了传统 DHT 在稀疏键空间里的复杂性。
+These ensure logarithmic hop counts and minimal connections per node. This avoids maintaining full subnet neighbor sets, while sidestepping DHT’s sparse-key complexity.
 
-通过这种机制我们获得了一种具有快速传播，同时具有弹性扩展的网络拓扑。节点需要加入被分配的子网（实际上有些类似于 S/Kademlia 的兄弟节点），以及 DHT 风格的邻居节点。当随机抽样发生，节点优先在所属子网发起请求，若未命中，则通过对数连接跳转至新子网的节点继续查询。
+This results in a **fast, resilient hybrid topology**. A node joins its assigned subnets (akin to S/Kademlia siblings) plus DHT-style neighbors. Upon sampling, it queries locally first; if missed, it hops to new subnets via logarithmic routing.
+
+## References
+
+* [**The rated list**](https://notes.ethereum.org/hfbmSM_9RYas6t013xjq6Q)
+* [**Scalability limitations of Kademlia DHTs when enabling Data Availability Sampling in Ethereum**](https://arxiv.org/pdf/2402.09993)
+* [**Improving DAS performance with GossipSub Batch Publishing**](https://ethresear.ch/t/improving-das-performance-with-gossipsub-batch-publishing/21713)
+* [**Accelerating blob scaling with FullDASv2**](https://ethresear.ch/t/accelerating-blob-scaling-with-fulldasv2-with-getblobs-mempool-encoding-and-possibly-rlc/22477)
+* [**FullDAS: towards massive scalability with 32MB blocks and beyond**](https://ethresear.ch/t/fulldas-towards-massive-scalability-with-32mb-blocks-and-beyond/19529)
+* [**PPPT: Fighting the GossipSub Overhead**](https://ethresear.ch/t/pppt-fighting-the-gossipsub-overhead-with-push-pull-phase-transition/22118)
+* [Draft (Notion link)](https://www.notion.so/216c156587888042805dfdcab42cf056?pvs=21)

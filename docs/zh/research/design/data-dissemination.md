@@ -1,3 +1,5 @@
+# 数据可用性层的分布式播种与调度优化
+
 数据可用性层的首要任务是将数据高效地分发到网络中，以确保数据以过饱和的方式存在于网络中，随后确保抽样结果的正确性和一致性。在最初的方案中，数据分散由区块构建者完成，这要求其拥有大量资源。这不仅增加了系统的中心化程度，同时也成为系统瓶颈。另一种更好的方式是使用去中心化播种，数据的分散、重构不再依赖于某个大型节点，从而安全地增加系统吞吐量。
 
 ## 分布式播种
@@ -29,6 +31,8 @@ mempool 水平分片方案试图在数据进入区块之前就进行职责划分
 mempool 水平分片结合分段列传播的策略，不仅极大缓解了构建者与 CL 节点的上传负担，还提升了网络中列数据的可用性与冗余度，是在不引入超级节点的前提下实现列级分布扩散的关键。
 
 这一方案在带宽节约方面效果显著，尤其适用于 home-staker。但它也引入了新的系统复杂性，最典型的问题是 sender 的多笔交易可能被分配到不同分片，从而导致 nonce-gap 破坏执行顺序。
+
+![image.png](/shared/partial-column-dissemination.png)
 
 ## 调度优化
 
@@ -71,18 +75,12 @@ Push-Pull Phase Transition（PPPT）是一种动态调度策略，通过跳数�
 
 这一“渐进式切换”显著减少了网络后期重复副本的生成，同时保持了前期的低延迟传播优势。实验结果表明，PPPT 在仅轻微增加整体延迟的前提下，几乎完全消除了副本冗余，实现了 GossipSub 在高吞吐场景下的带宽优化。
 
-值得一提的是，PPPT 会导致
+## 参考
 
-https://ethresear.ch/t/accelerating-blob-scaling-with-fulldasv2-with-getblobs-mempool-encoding-and-possibly-rlc/22477/1
-
-https://ethresear.ch/t/pppt-fighting-the-gossipsub-overhead-with-push-pull-phase-transition/22118
-
-https://ethresear.ch/t/improving-das-performance-with-gossipsub-batch-publishing/21713
-
-https://ethresear.ch/t/fulldas-towards-massive-scalability-with-32mb-blocks-and-beyond/19529
-
-https://ethresear.ch/t/from-4844-to-danksharding-a-path-to-scaling-ethereum-da/18046
-
-https://ethresear.ch/t/doubling-the-blob-count-with-gossipsub-v2-0/21893?utm_source=chatgpt.com
-
-https://ethresear.ch/t/a-new-design-for-das-and-sharded-blob-mempools/22537
+- [**Accelerating blob scaling with FullDASv2 (with getBlobs, mempool encoding, and possibly RLC)**](https://ethresear.ch/t/accelerating-blob-scaling-with-fulldasv2-with-getblobs-mempool-encoding-and-possibly-rlc/22477)
+- [**PPPT: Fighting the GossipSub Overhead with Push-Pull Phase Transition**](https://ethresear.ch/t/pppt-fighting-the-gossipsub-overhead-with-push-pull-phase-transition/22118)
+- [**Improving DAS performance with GossipSub Batch Publishing**](https://ethresear.ch/t/improving-das-performance-with-gossipsub-batch-publishing/21713)
+- [**FullDAS: towards massive scalability with 32MB blocks and beyond**](https://ethresear.ch/t/fulldas-towards-massive-scalability-with-32mb-blocks-and-beyond/19529)
+- [**From 4844 to Danksharding: a path to scaling Ethereum DA**](https://ethresear.ch/t/from-4844-to-danksharding-a-path-to-scaling-ethereum-da/18046)
+- [**Doubling the blob count with Gossipsub v2.0**](https://ethresear.ch/t/doubling-the-blob-count-with-gossipsub-v2-0/21893)
+- [**A new design for DAS and Sharded Blob Mempools**](https://ethresear.ch/t/a-new-design-for-das-and-sharded-blob-mempools/22537)

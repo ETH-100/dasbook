@@ -1,198 +1,197 @@
-目前为止，以太坊及其他多个数据可用性层都使用了 RS 码或变体，并结合 KZG 来对抗不信任环境。RLNC 是另一种替代方案，它具有多方面优势，但在 DAS 中使用仍有很多挑战。
+# Applications of Random Linear Network Coding (RLNC) in Data Availability Layers
 
-## 背景
+::: warning
+This article discusses cutting-edge solutions currently being explored by the community. Some mechanisms are still in theoretical design, experimental validation, or draft proposal stages. Their security, feasibility, and implementation details may evolve with future research.
+:::
 
-### **蝴蝶网络（The Butterfly Network）**
+So far, Ethereum and several other data availability layers have adopted Reed-Solomon (RS) codes or their variants, often combined with KZG commitments to operate in adversarial environments. RLNC presents an alternative with several advantages, though its use in DAS still faces many challenges.
 
-DAS 中的数据分发与通信网络理论中的单播（unicast）、广播（broadcast）、多播（multicast）的相关概念有着非常深刻的联系，其中 LNC(Linear Network Coding) 是其中具有突破性的理论。LNC 指出传统路由无法实现多播容量上限，但通过中间节点执行线性编码，可以达到最小割限制的最大吞吐量。
+## Background
 
-蝴蝶网络是网络编码理论的经典例子，用于清晰地展示传统路由方式在多播场景下的局限性，以及 LNC 的基本原理。
+### **The Butterfly Network**
 
-[图：蝴蝶网络]
+Data dissemination in DAS is deeply related to classical concepts in communication networks such as unicast, broadcast, and multicast. Linear Network Coding (LNC) is a breakthrough in this area. LNC demonstrates that traditional routing cannot achieve the multicast capacity bound, but by allowing intermediate nodes to perform linear encoding, it is possible to reach the theoretical max throughput defined by the min-cut.
 
-在简化的网络中，包含一个源节点 $s$ ，两个接收节点 $t_1, t_2$，以及若干中间节点。源节点 $s$ 复制原始信息分别发送给两个接收端，每条消息占用的带宽也为 1，每个节点之间的带宽也为 1，即节点每次只能发送一条消息。
+The butterfly network is a canonical example in network coding theory, illustrating the limitations of traditional routing in multicast scenarios and demonstrating the core idea behind LNC.
 
-其中节点 $d$ 被两个接受节点共享，在传统方式中， $d$ 只能发送 $A$ 或者 $B$ ，导致节点 $t_1$ 收到了重复的 $A$ ， $t_2$ 收到了重复的 $B$ 。并且，共需要 4 个时隙才能发送完成。
+![image.png](/shared/the-butterfly-network.png)
 
-而如果允许中间节点执行线性编码，从而作为一条消息传输 $A + B$，接收端即可分别利用自己已有的信息恢复出完整内容：
+In this simplified network, there are two receiver nodes $t_1$ and $t_2$, along with several intermediate nodes. The goal is to deliver two messages to both receivers. Each message and each link has a capacity of 1 (i.e., only one message per time slot per node).
 
-- $t_1$ 收到 $A$ 和 $A + B$，可计算出 $B = (A + B) - A$
-- $t_2$ 收到 $B$ 和 $A + B$，可计算出 $A = (A + B) - B$
+Node $d$ is shared by both receivers. In traditional routing, $d$ can send only $A$ or $B$, causing $t_1$ to receive $A$ twice and $t_2$ to receive $B$ twice, requiring 4 time slots.
 
-因此，借助网络编码，两位接收者都能够在 3 个时隙内收到完整数据。线性网络编码是一种中间节点通过线性组合的方式将数据从源节点传输到汇聚节点的程序。
+If we allow node $d$ to send a linear combination $A + B$, then:
 
-### RLNC 编码原理
+* $t_1$ receives $A$ and $A + B$, computes $B = (A + B) - A$;
+* $t_2$ receives $B$ and $A + B$, computes $A = (A + B) - B$;
 
-随机线性网络编码 (RLNC) 是一种简单但功能强大的编码方案，使用分散式算法实现接近最佳吞吐量。
+Thus, both receivers obtain complete information in just 3 time slots. Linear network coding enables intermediate nodes to forward linear combinations instead of raw data, improving efficiency.
 
-设有一批原始数据块 $m_1, m_2, \dots, m_k$，每个传输节点或存储节点不再直接转发这些原始数据，而是发送一组线性组合：
+### RLNC Encoding Principle
+
+Random Linear Network Coding (RLNC) is a simple yet powerful scheme that uses decentralized algorithms to achieve near-optimal throughput.
+
+Given a set of original data blocks $m_1, m_2, \dots, m_k$, each node transmits linear combinations:
 
 $$
 c_i = \sum_{j=1}^k \alpha_{i,j} \cdot m_j
 $$
 
-其中：
+where:
 
-- $\alpha_{i,j}$ 是从有限域（如 $\mathbb{F}_{2^8}$）中随机选取的系数；
-- $c_i$ 是第 $i$ 个编码块；
-- 每个编码块都附带其系数 $(\alpha_{i,1}, ..., \alpha_{i,k})$，称为编码向量。
+* $\alpha_{i,j}$ are randomly chosen coefficients from a finite field, e.g., $\mathbb{F}_{2^8}$;
+* $c_i$ is the encoded block;
+* Each encoded block includes its encoding vector $(\alpha_{i,1}, ..., \alpha_{i,k})$.
 
-只要收集到任意 $k$ 个线性无关的编码块，就可以通过求解线性方程组，还原出所有原始数据块。
-
-编码的过程是将数据切分为 $k$ 个原始块 $m_1, \dots, m_k$，每个节点：
-
-- 随机生成编码向量 $\boldsymbol{\alpha}_i \in \mathbb{F}^k$
-- 计算 $c_i = \boldsymbol{\alpha}_i \cdot \mathbf{m}$
-- 发送 $(c_i, \boldsymbol{\alpha}_i)$
-
-解码需要收集到 $k$ 个编码块 $(c_i, \boldsymbol{\alpha}_i)$，组成方程组：
+Once any $k$ linearly independent blocks are collected, the original data can be recovered by solving the corresponding linear system:
 
 $$
-\begin{bmatrix} \alpha_{1,1} & \alpha_{1,2} & \cdots & \alpha_{1,k} \\ \alpha_{2,1} & \alpha_{2,2} & \cdots & \alpha_{2,k} \\ \vdots & \vdots & \ddots & \vdots \\ \alpha_{k,1} & \alpha_{k,2} & \cdots & \alpha_{k,k} \end{bmatrix} \cdot \begin{bmatrix} m_1 \\ m_2 \\ \vdots \\ m_k \end{bmatrix} = \begin{bmatrix} c_1 \\ c_2 \\ \vdots \\ c_k \end{bmatrix}
+\begin{bmatrix} \alpha_{1,1} & \cdots & \alpha_{1,k} \\ \vdots & \ddots & \vdots \\ \alpha_{k,1} & \cdots & \alpha_{k,k} \end{bmatrix}
+\cdot
+\begin{bmatrix} m_1 \\ \vdots \\ m_k \end{bmatrix}
+=
+\begin{bmatrix} c_1 \\ \vdots \\ c_k \end{bmatrix}
 $$
 
-只要左边的矩阵是满秩，即行线性无关，就可以通过高斯消元求解出原始数据。
+Intermediate nodes can also recombine received encoded blocks without decoding, preserving rank and enabling robust propagation.
 
-中继节点可将接收到的多个编码块再次线性组合生成新的编码块，即重新编码，从而在不解码的情况下维持传播的 rank 空间。接收节点收集到 $k$ 个线性无关的编码块后，可构建一个 $k \times k$ 系数矩阵，通过高斯消元求解原始向量。
+### Pedersen Commitment
 
-### Pedersen 承诺
+In untrusted environments like blockchains, we must ensure that data has not been tampered with and is properly encoded. Pedersen commitments address this to some extent.
 
-在 RLNC 应用到区块链这样的不信任环境中时，首先需要解决的问题是如何确保原始数据未被篡改并且被正确地编码，Pedersen 承诺在一定程度上解决了该问题。
+Pedersen commitments are based on the discrete logarithm problem and require a trusted setup (distinct from KZG). The setup includes:
 
-Pedersen 承诺是基于离散对数难题的承诺方案，首先需要一个生成公共参数的设置（setup），注意和 KZG 的可信设置区分开来。公共参数（setup）：
+* A cyclic group $\mathbb{G}$ of prime order $q$;
+* Two generators $G, H \in \mathbb{G}$, with $\log_G H$ unknown.
 
-- 有一个**循环群** $\mathbb{G}$（如椭圆曲线群），群阶为素数 $q$；
-- 选定两个生成元 $G, H \in \mathbb{G}$，其中 $\log_G H$ 不可知；
-
-承诺过程是对消息 $m \in \mathbb{Z}_q$ 和随机数 $r \in \mathbb{Z}_q$，构造承诺：
+For a message $m \in \mathbb{Z}_q$ and randomness $r \in \mathbb{Z}_q$, the commitment is:
 
 $$
 C = m \cdot G + r \cdot H
 $$
 
-其中：
+Pedersen commitments are homomorphic: $C_{v_1 + v_2} = C_{v_1} + C_{v_2}$. This makes them well-suited for verifying linear combinations. Variants without randomness (i.e., $r = 0$) are used in RLNC applications where hiding the message is not required.
 
-- $m$ 是你要承诺的“消息”；
-- $r$ 是隐藏消息所用的随机性（noise）；
-- $C \in \mathbb{G}$ 是你提交的承诺值。
+## Accelerating Block Propagation
 
-和 KZG 相比它的计算开销更小，相比默克尔证明它具备同态性，对向量 $v_1, v_2$ 有 $C_{v_1 + v_2} = C_{v_1} + C_{v_2}$，这使其非常适合线性组合验证。在 RLNC 应用中，实际上使用了 Pedersen 承诺的变型，因为我们不需要隐藏原始数据。
+RLNC was first proposed to accelerate block propagation and save bandwidth.
 
-## 区块传播加速
+### Sender
 
-RLNC 最初被提议在区块传播中使用，用于显著地加快传播速度并节省带宽，基本原理是：
+**Initialization**
 
-### 生成方
-
-**初始化**
-
-- 将区块拆分成 $N$ 个子块；
-- 每个子块作为 $\mathbb{F}_p^M$ 中的一个向量 $v_i = (a_{i1}, ..., a_{iM})$；
-- 用一组公开的固定 $G_j \in \mathbb{G}$ 对每个 $v_i$ 生成一个 Pedersen 承诺：
+* Split the block into $N$ chunks;
+* Each chunk $v_i = (a_{i1}, ..., a_{iM}) \in \mathbb{F}_p^M$;
+* Commit to each $v_i$ using Pedersen commitments with fixed public generators $G_j \in \mathbb{G}$:
 
 $$
 C_i = \sum_{j=1}^{M} a_{ij} \cdot G_j
 $$
 
-**构造消息**
+**Message Construction**
 
-其中每个子块或 $v_i$ 可以理解为 RLNC 中的一个“块”，对其进行编码后传播，并使用 Pedersen 对每个 $v_i$ 承诺以确保数据的正确性。对每个接收节点，均匀随机地选择一组标量 $b_i$ , $i \in \{1,…,N\}$ ，生成编码块 $v$ ：
+Each $v_i$ is treated as a block in RLNC. The sender randomly chooses scalars $b_i$ to form a linear combination:
 
 $$
 v = \sum_{i=1}^N b_i v_i
 $$
 
-发送消息：
+Message includes:
 
-- 编码数据 $v$（大小为 $32M$ 字节）；
-- 对应的 $N$ 个承诺 $C_i$（共 $32N$ 字节）；
-- $N$ 个编码系数 $b_i$（共 $32N$ 字节）；
-- 一份对承诺拼接串 $C_1 || ... || C_N$ 的 BLS 签名（96 字节）。
+* Encoded data $v$ ($32M$ bytes);
+* $N$ commitments $C_i$ ($32N$ bytes);
+* $N$ coefficients $b_i$ ($32N$ bytes);
+* A BLS signature on the concatenated commitments ($96$ bytes).
 
-### 接受方
+### Receiver
 
-接受方在收到消息后，首先确保签名合法。收到的向量 $v$ 可表示为  $(a_1, ..., a_M)$，计算其承诺 $C$：
+The receiver checks the signature, reconstructs the commitment $C$ from $v = (a_1, ..., a_M)$:
 
 $$
 C = \sum_{j=1}^M a_j G_j
 $$
 
-从接收到的 $b_i$ 计算组合承诺：
+And verifies:
 
 $$
-C' = \sum_{i=1}^N b_i C_i
+C' = \sum_{i=1}^N b_i C_i \quad \Rightarrow \quad C \stackrel{?}{=} C'
 $$
 
-比较是否 $C = C'$，从而验证该组合块是否是合法 RLNC 组合。之后，如果 $v$ 已经存在于本地向量生成的线性空间中，则丢弃，否则添加到集合，直到收齐 $N$ 个线性无关向量，可解出原始 $v_i$。
+If valid and $v$ is linearly independent of stored vectors, it is added. Once $N$ independent vectors are collected, the original $v_i$ can be recovered.
 
-### 转发方
+### Forwarder
 
-无需解码原始数据，转发节点即可构造新的合法组合：
+Without decoding, relays can generate new valid combinations:
 
-1. 选择 $L$ 个已存编码块 $w_i$ 及其对应系数向量 $b_{ij}$；
-2. 随机选取系数 $\alpha_i$ ，对 $w_i$ 线性组合生成新的编码块： $w = \sum \alpha_i w_i$
-3. 同时更新新的组合系数 $a_j = \sum \alpha_i b_{ij}$；
-4. 发送新消息包 $(w, a_j, C_i, \text{signature})$，无须变更承诺或签名。
+1. Select $L$ stored vectors $w_i$ with encoding vectors $b_{ij}$;
+2. Randomly choose scalars $\alpha_i$;
+3. Compute $w = \sum \alpha_i w_i$ and $a_j = \sum \alpha_i b_{ij}$;
+4. Send new message $(w, a_j, C_i, \text{signature})$.
 
-所有转发节点使用同一份承诺 $C_i$ 与提议者的签名，避免了重复验证。
+All nodes use the same commitments and proposer signature, avoiding redundant verification.
 
-## DAS 应用
+## DAS Applications
 
-DAS 对传播的要求和区块大不相同，首先 DAS 的数据量更大，并且要求在极短的时间内分发。为了尽可能地减少荷载，编码系数可以来自更小的字段 $\mathbb{C_p}$ 。系数甚至可以只有一位，此时，可以理解为一种类似于 LT 的 XOR ，或者“强制部分系数为 0”。
+DAS has different requirements from block propagation:
 
-与 2D RS 的采样方式不同的是，
+* Larger data volumes;
+* Extremely low-latency distribution;
+* Fragmented download (each node stores only a portion).
 
-更重要的一方面是， DAS 需要对数据分片，单个节点并不下载完整数据。
+Coefficients can be drawn from small fields, even binary fields (i.e., XOR). This approximates Fountain codes.
 
-另外，DAS 的核心之一是允许节点同样采样在无需信任的情况下确保数据可用性。RLNC 的抽样无法针对具体数据块，如 2D RS 中的某一列或某一单元格，而是对整个子空间中的线性组合向量进行验证。
-
-与当前 DAS 网络设计相同的是，将有一组种子节点保管 $K$ 份数据。即：
+Unlike 2D RS sampling, RLNC does not allow sampling specific cells or columns. Instead, it verifies linear combinations over the entire space. However, like current DAS designs, seed nodes store $K$ independent vectors:
 
 $$
 \text{span}(w_1, ..., w_K) \subseteq \mathbb{F}_p^N
 $$
 
-采样节点可以生成 $K$ 个随机系数 $c_1, \dots, c_K$，要求种子节点使用此系数线性组合 $K$ 份线性无关的向量：
+A sampling node sends $K$ random scalars $c_1, ..., c_K$, requesting:
 
 $$
-w=c_1w_1+ ... + c_Kw_K
+w = c_1 w_1 + \cdots + c_K w_K
 $$
 
-采样节点只需要一份线性聚合向量 $w$ 和相应系数，我们依然可以使用系数验证 Pedersen 承诺，进而确保种子节点存储了 $K$ 份线性无关的向量。
+With $w$ and the coefficients, the sampler verifies the commitment. This achieves **sample visibility**—samples are accessible and verifiable, unlike 2D RS where sampled cells may not be discoverable.
 
-在 2D RS 中的 Cell 采样中，样本是随机的单元格，无法被网络找到，这实际上破坏了 DAS 安全假设中的样本可发现性。但在 RLNC 中，采样的样本是可以被发现和使用的，实现了“采样即托管”。
+### Attack Vectors and Defenses
 
-难点在于，这种机制下的样本是可以被伪造的。攻击者声称拥有非线性相关向量 $w_1,…,w_K$ ，实际上只有一个向量 $w_f$。在受到采样请求后，可以使用接受到的系数伪造并通过验证，只需要构造线性无关的 $w_1',…,w_K'$ 并使得：
-
-$$
-a_1w_1'+ ... + a_Kw_K'=w_f
-$$
-
-采样节点验证的本质是检查：
+A malicious node can cheat by storing only one vector $w_f$, and crafting responses that appear as combinations of fake vectors $w_1', ..., w_K'$ satisfying:
 
 $$
-\text{Com}(w) \stackrel{?}{=} \sum_{i=1}^N \alpha_i C_i
+a_1 w_1' + \cdots + a_K w_K' = w_f
 $$
 
-其中 $\alpha_i$ 是通过组合向量 $w$ 的原始编码系数间接得到的，而 $w$ 本身已经是一个合法的线性组合结果，因此这种验证依然成立。这意味着攻击者即便仅存储了单个向量 $w_f$，也能够伪造出看似由 $K$ 个线性无关向量构成的响应，使采样节点验证通过。这种攻击本质上并未破坏承诺机制的正确性，而是利用了承诺机制对线性组合的无差别性，隐瞒了真实存储的退化情况。
+Since commitments verify linear combinations, this forged response still passes.
 
-为了解决存储退化的问题，一种方式是退回到 I-RLC（Interactive RLC），采样节点首先请求种子节点当前拥有的数据向量的系数表示，例如这些向量是如何由原始数据块线性组合得到的。另一种是采用非交互式的 NI-RLC（Non-Interactive RLC），以减少交互。
+To prevent such **degeneracy attacks**, two approaches exist:
 
-一种方法是在初始阶段要求编码系数满足 RREF 格式，这对任意子空间而言几乎唯一的规范基底，攻击者只能在已固定的 RREF 基底上计算组合，无法临时捏造一套新的 $a_i'$。目前，该机制的安全性尚未得到证明。
+* **I-RLC** (Interactive): The sampler requests how stored vectors are derived;
+* **NI-RLC** (Non-Interactive): Reduce interaction.
 
-## 总结
+Another method is requiring RREF (Reduced Row Echelon Form) encoding bases initially. RREF serves as a nearly unique canonical basis, limiting forgery flexibility. This approach's security remains under evaluation.
 
-将 RLNC 应用于数据可用性层具有多项显著优势：
+## Conclusion
 
-- **更接近最优的网络吞吐量**：RLNC 理论上可逼近最小割的带宽上限，显著提升传播效率；
-- **天然支持多源多播与再编码**：中继节点无需解码即可生成新的组合消息，提升传播的鲁棒性与去中心化能力；
-- **兼容轻量验证机制**：配合 Pedersen 承诺机制，可在无需信任的环境中快速验证编码数据的正确性；
-- **满足样本可见性**：随机采样的样本可直接作为网络存储，有望打破传统 DAS 中样本不可定位的限制。
+Applying RLNC to data availability layers offers several significant advantages:
 
-另外，与 2D RS 相比，RLNC 不再需要子网（并非绝对，取决于具体设计）。虽然 RLNC 无法像 2D RS 那样通过行列结构交叉放大，但交叉放大本身也可理解为一种线性网络编码的特例。
-尽管 RLNC 展现出在区块传播与 DAS 网络中的理论优势，其实际部署仍需解决一系列工程与安全挑战。尤其在无需信任的环境中，如何同时满足高效传播、低通信开销与强安全保证，是当前研究的关键难题：
+* **Near-optimal throughput**: Approaches the min-cut bound;
+* **Re-encoding and multicast**: Relays can recombine without decoding;
+* **Efficient verification**: Pedersen commitments enable lightweight trustless validation;
+* **Sample visibility**: Overcomes the sample discoverability limitation in 2D RS schemes.
 
-- **采样安全性机制不完备**：在 RLNC 中，采样安全仍然在探索过程中；
-- **与 2D RS 的权衡问题**：失去 Cell 级的传播和采样效率，两者在传播效率、样本定位能力、解码复杂度之间仍需细致权衡；
-- **专利与标准化障碍**：部分 RLNC 相关技术存在专利限制，可能在实际落地中引发法律与许可问题，影响其在开放网络协议中的推广；
-- **重构成本**：RLNC 与 RS + KZG 的机制完全不同，这为系统引入新的复杂度，需要在收益和成本之间作出权衡。
+Moreover, RLNC may eliminate the need for subnetworks (depending on the design). While RLNC lacks the matrix-structured amplification of 2D RS, that amplification itself can be seen as a special case of linear network coding.
+
+However, several challenges remain for practical deployment:
+
+* **Sampling security**: Still an open problem in RLNC;
+* **Trade-offs with 2D RS**: Need to balance sample locality, decoding complexity, and throughput;
+* **Patent & standardization**: Some RLNC techniques are patented, which may hinder adoption;
+* **System complexity**: RLNC introduces significant architectural changes compared to RS + KZG.
+
+## References
+
+* [**Linear network coding**](https://en.wikipedia.org/wiki/Linear_network_coding)
+* [**Battle of the Codes: RLNC vs Reed-Solomon & Fountain Codes**](https://mirror.xyz/0xBfAC4db6d990A6cF9842f437345c447B18EbeF73/GD-GGB8jlpv9wxwpLQzSFkJfT_F8fz91MxRoocI4L20)
+* [**Faster block/blob propagation in Ethereum**](https://ethresear.ch/t/faster-block-blob-propagation-in-ethereum/21370)
+* [Alternative DAS concept based on RLNC](https://hackmd.io/@nashatyrev/Bku-ELAA1e)

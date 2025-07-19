@@ -1,3 +1,5 @@
+# 网络拓扑设计
+
 数据可用性层在理论上具有很强的可扩展性，但首先需要解决的问题是如何将数据分散到对等点，并从对等点获取数据。Gossip 和 DHT 是两种典型的点对点网络协议，其中 DHT 作为数据传播的点对点网络已被广泛使用多年，而 Gossip 协议已在区块链底层中得到了广泛应用。然而，无论 Gossip 还是 DHT 都并非专门为 DAS 而设计，存在不同的优势和弊端，而 DAS 网络拓扑的设计需要综合衡量安全性和吞吐量。
 
 ## Gossip
@@ -67,8 +69,17 @@ DAS 实际上包含了两个阶段，数据分散和抽样。其中数据分散�
 - **超立方体（Hypercube）连接**：节点连接到编号为 $C + 2^j$（对主题总数取模）的主题，并依此覆盖多个二进制位。通过改变 $j$ 的位置，可以在大网络中仅用 $\log_2 C$ 步连接至任意主题，这种方式路径短、效率高。
 - **MSB 翻转（Kademlia 风格）连接**：节点为自己当前主题编号的高位第 $j+1$ 位翻转后形成新编号，如从 $10101…$ 翻到 $11101…$，依此形成邻居。这类似 Kademlia 的“前缀差异”策略，能够快速缩短主题间 XOR 距离。
 
-[图片： 拓扑结构]
-
 这两种种方式确保任意两个主题之间的跳数为对数级，而每个节点仅需维护少量条连接，避免了维护大量子网邻居的开销，同时也避免了传统 DHT 在稀疏键空间里的复杂性。
 
 通过这种机制我们获得了一种具有快速传播，同时具有弹性扩展的网络拓扑。节点需要加入被分配的子网（实际上有些类似于 S/Kademlia 的兄弟节点），以及 DHT 风格的邻居节点。当随机抽样发生，节点优先在所属子网发起请求，若未命中，则通过对数连接跳转至新子网的节点继续查询。
+
+## 参考
+
+- [**The rated list**](https://notes.ethereum.org/hfbmSM_9RYas6t013xjq6Q)
+- [Scalability limitations of Kademlia DHTs when enabling Data Availability Sampling in Ethereum](https://arxiv.org/pdf/2402.09993)
+- [**Improving DAS performance with GossipSub Batch Publishing**](https://ethresear.ch/t/improving-das-performance-with-gossipsub-batch-publishing/21713)
+- [**Accelerating blob scaling with FullDASv2 (with getBlobs, mempool encoding, and possibly RLC)**](https://ethresear.ch/t/accelerating-blob-scaling-with-fulldasv2-with-getblobs-mempool-encoding-and-possibly-rlc/22477)
+- [**FullDAS: towards massive scalability with 32MB blocks and beyond**](https://ethresear.ch/t/fulldas-towards-massive-scalability-with-32mb-blocks-and-beyond/19529)
+- [**PPPT: Fighting the GossipSub Overhead with Push-Pull Phase Transition**](https://ethresear.ch/t/pppt-fighting-the-gossipsub-overhead-with-push-pull-phase-transition/22118)
+
+[草稿](https://www.notion.so/216c156587888042805dfdcab42cf056?pvs=21)

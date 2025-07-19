@@ -1,3 +1,9 @@
+# 随机线性网络编码（RLNC）在数据可用性层的应用
+
+::: warning
+本文内容基于当前社区正在探索的前沿方案，部分机制尚处于理论设计、实验验证或未定稿的提案阶段，相关的安全性、可行性与实现细节可能随后续研究有所调整。
+:::
+
 目前为止，以太坊及其他多个数据可用性层都使用了 RS 码或变体，并结合 KZG 来对抗不信任环境。RLNC 是另一种替代方案，它具有多方面优势，但在 DAS 中使用仍有很多挑战。
 
 ## 背景
@@ -8,9 +14,9 @@ DAS 中的数据分发与通信网络理论中的单播（unicast）、广播（
 
 蝴蝶网络是网络编码理论的经典例子，用于清晰地展示传统路由方式在多播场景下的局限性，以及 LNC 的基本原理。
 
-[图：蝴蝶网络]
+![image.png](/shared/the-butterfly-network.png)
 
-在简化的网络中，包含一个源节点 $s$ ，两个接收节点 $t_1, t_2$，以及若干中间节点。源节点 $s$ 复制原始信息分别发送给两个接收端，每条消息占用的带宽也为 1，每个节点之间的带宽也为 1，即节点每次只能发送一条消息。
+在简化的网络中，包含有两个接收节点 $t_1, t_2$，以及若干中间节点。原始信息需要分别发送给两个接收端，每条消息占用的带宽也为 1，每个节点之间的带宽也为 1，即节点每次只能发送一条消息。
 
 其中节点 $d$ 被两个接受节点共享，在传统方式中， $d$ 只能发送 $A$ 或者 $B$ ，导致节点 $t_1$ 收到了重复的 $A$ ， $t_2$ 收到了重复的 $B$ 。并且，共需要 4 个时隙才能发送完成。
 
@@ -196,3 +202,10 @@ $$
 - **与 2D RS 的权衡问题**：失去 Cell 级的传播和采样效率，两者在传播效率、样本定位能力、解码复杂度之间仍需细致权衡；
 - **专利与标准化障碍**：部分 RLNC 相关技术存在专利限制，可能在实际落地中引发法律与许可问题，影响其在开放网络协议中的推广；
 - **重构成本**：RLNC 与 RS + KZG 的机制完全不同，这为系统引入新的复杂度，需要在收益和成本之间作出权衡。
+
+## 参考
+
+- [**Linear network coding**](https://en.wikipedia.org/wiki/Linear_network_coding)
+- [**Battle of the Codes: RLNC vs Reed-Solomon & Fountain Codes**](https://mirror.xyz/0xBfAC4db6d990A6cF9842f437345c447B18EbeF73/GD-GGB8jlpv9wxwpLQzSFkJfT_F8fz91MxRoocI4L20)
+- [**Faster block/blob propagation in Ethereum**](https://ethresear.ch/t/faster-block-blob-propagation-in-ethereum/21370)
+- [Alternative DAS concept based on RLNC](https://hackmd.io/@nashatyrev/Bku-ELAA1e)
