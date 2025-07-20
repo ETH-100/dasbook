@@ -76,7 +76,19 @@ export const shared = defineConfig({
     ['meta', { property: 'og:title', content: 'DASBook | Everything about DAS' }],
     ['meta', { property: 'og:site_name', content: 'DASBook' }],
     ['meta', { property: 'og:url', content: 'https://dasbook.eth100.wtf/' }],
-    ['script', { src: 'https://cdn.usefathom.com/script.js', 'data-site': 'AZBRSFGG', 'data-spa': 'auto', defer: '' }]
+    ['script', { src: 'https://cdn.usefathom.com/script.js', 'data-site': 'AZBRSFGG', 'data-spa': 'auto', defer: '' }],
+    [
+      'script',
+      { async: '', src: 'https://www.googletagmanager.com/gtag/js?id=G-CNF7DNTS26' }
+    ],
+    [
+      'script',
+      {},
+      `window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-CNF7DNTS26');`
+    ]
   ],
 
   themeConfig: {
