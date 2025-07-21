@@ -70,17 +70,25 @@ export const shared = defineConfig({
   head: [
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/ETH100-icon.svg' }],
     ['link', { rel: 'icon', type: 'image/png', href: '/ETH100-icon-mini.png' }],
+
     ['meta', { name: 'theme-color', content: '#5f67ee' }],
+
     ['meta', { property: 'og:type', content: 'website' }],
-    ['meta', { property: 'og:locale', content: 'en' }],
+    ['meta', { property: 'og:locale', content: 'en_US' }],
     ['meta', { property: 'og:title', content: 'DASBook | Everything about DAS' }],
     ['meta', { property: 'og:site_name', content: 'DASBook' }],
     ['meta', { property: 'og:url', content: 'https://dasbook.eth100.wtf/' }],
-    ['script', { src: 'https://cdn.usefathom.com/script.js', 'data-site': 'AZBRSFGG', 'data-spa': 'auto', defer: '' }],
-    [
-      'script',
-      { async: '', src: 'https://www.googletagmanager.com/gtag/js?id=G-CNF7DNTS26' }
-    ],
+    ['meta', { property: 'og:description', content: "Your living guide to DAS: from core concepts to cutting-edge research, made easy to understand." }],
+    ['meta', { property: 'og:image', content: 'https://dasbook.eth100.wtf/eth100-icon.png' }],
+
+    ['meta', { name: 'twitter:card', content: 'summary' }],
+    ['meta', { name: 'twitter:title', content: 'DASBook | Everything about DAS' }],
+    ['meta', { name: 'twitter:description', content: "Your living guide to DAS: from core concepts to cutting-edge research, made easy to understand." }],
+    ['meta', { name: 'twitter:image', content: 'https://dasbook.eth100.wtf/eth100-icon.png' }],
+    // [
+    //   'script',
+    //   { async: '', src: 'https://www.googletagmanager.com/gtag/js?id=G-CNF7DNTS26' }
+    // ],
     [
       'script',
       {},
