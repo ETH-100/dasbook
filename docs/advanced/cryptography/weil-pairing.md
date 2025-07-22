@@ -122,3 +122,8 @@ e_m(P, Q) = \frac{f_P(Q + X)}{f_P(X)} \Big/ \frac{f_Q(P - X)}{f_Q(-X)}
 $$
 
 This formula looks different, but is mathematically equivalent. It only requires constructing the functions $f_P$ and $f_Q$, both of which we have already constructed explicitly.
+
+## References
+
+- [**A Taxonomy of Pairing-Friendly Elliptic Curves**](https://eprint.iacr.org/2006/372.pdf)
+- [**Pairing-Based Cryptography** – Galbraith (Lecture Notes)](https://www.math.auckland.ac.nz/~sgal018/crypto-book/ch11.pdf)

@@ -115,3 +115,8 @@ e_m(P, Q) = \frac{f_P(Q + X)}{f_P(X)} \Big/ \frac{f_Q(P - X)}{f_Q(-X)}
 $$
 
 这个公式长得不太一样，但结果是完全等价的，并且只需要构造 $f_P$ 和 $f_Q$，这两个函数我们前面已经明确地构造出来了。
+
+## 参考
+
+- [**A Taxonomy of Pairing-Friendly Elliptic Curves**](https://eprint.iacr.org/2006/372.pdf)
+- [**Pairing-Based Cryptography** – Galbraith (Lecture Notes)](https://www.math.auckland.ac.nz/~sgal018/crypto-book/ch11.pdf)

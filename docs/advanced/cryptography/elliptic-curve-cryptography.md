@@ -1,5 +1,9 @@
 # Elliptic Curve Cryptography
 
+::: tip
+This content was greatly inspired by [**Elliptic Curve Cryptography: a gentle introduction**](https://andrea.corbellini.name/2015/05/17/elliptic-curve-cryptography-a-gentle-introduction/). The original article includes some helpful animations to aid understanding — we recommend reading it alongside this text.
+:::
+
 Cryptography is built on the principle of **easy encryption and hard decryption**. Elliptic curve cryptography originates from a seemingly simple multiplication:
 
 $$
@@ -209,3 +213,10 @@ We’ve built our mathematical kingdom:
 6. If $G \ne O$, it is the base point. Use it to build cryptographic systems.
 
 Now, with base point $G$, we can generate **key pairs**, perform **public-key encryption**, and **digital signatures**. This is the foundation of **modern elliptic curve cryptography**.
+
+## References
+
+- [**A (Relatively Easy To Understand) Primer on Elliptic Curve Cryptography**](https://blog.cloudflare.com/a-relatively-easy-to-understand-primer-on-elliptic-curve-cryptography)
+- [**Elliptic Curve Cryptography: a gentle introduction** – Andrea Corbellini](https://andrea.corbellini.name/2015/05/17/elliptic-curve-cryptography-a-gentle-introduction/)
+- [**SEC 2: Recommended Elliptic Curve Domain Parameters** (SECG)](https://www.secg.org/sec2-v2.pdf)
+- [**OpenSSL ECC Tutorial**](https://wiki.openssl.org/index.php/Elliptic_Curve_Cryptography)

@@ -136,3 +136,7 @@ $$
 $$
 
 Congratulations—you’ve now invented the complete Tate pairing. But there’s one last critical question: **how can we compute it efficiently?** Without efficient computation, everything else is meaningless.
+
+## References
+
+- [“The Tate Pairing” – Stanford PBC Library](https://crypto.stanford.edu/pbc/notes/ep/tate.html)

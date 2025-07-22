@@ -162,3 +162,10 @@ ECDSA 的签名是一个二元组 $(r, s)$：
 - 是否处于主子群或倍数子群中（用于判断正确的公钥）
 
 这 2 bit 信息配合 $(r, s)$ 即可恢复出签名者公钥。这就是为什么在以太坊的交易结构中，签名是 $(v, r, s)$，其中的 $v$ 是 recovery id（也可包含链 ID），用于恢复地址。
+
+## 参考
+
+- [**Elliptic Curve Cryptography: ECDH and ECDSA**](https://andrea.corbellini.name/2015/05/30/elliptic-curve-cryptography-ecdh-and-ecdsa/)
+- [**Schnorr Digital Signature**](https://www.geeksforgeeks.org/computer-networks/schnorr-digital-signature/)
+- [**Schnorr Signatures, Commitments** – UIUC Cryptography Lecture Notes](https://courses.grainger.illinois.edu/cs498ac3/fa2020/Files/Lecture_13_Scribe.pdf)
+- [**To Schnorr and beyond (Part 2)** – Cryptography Engineering Blog](https://blog.cryptographyengineering.com/2023/11/30/to-schnorr-and-beyond-part-2)

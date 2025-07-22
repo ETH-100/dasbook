@@ -1,4 +1,9 @@
+
 # 椭圆曲线密码学
+
+::: tip
+这篇内容受到了《[**Elliptic Curve Cryptography: a gentle introduction**](https://andrea.corbellini.name/2015/05/17/elliptic-curve-cryptography-a-gentle-introduction/)》很大启发，原文有一些动画帮助理解，建议同时阅读原文。
+:::
 
 密码学建立在加密容易解密难的基础上，椭圆曲线加密发端于一个简单的乘法：
 
@@ -185,3 +190,10 @@ $$
 6. 若 $G ≠ O$，则 $G$ 是我们想要的基点，可以开始加密系统构建。
 
 接下来，我们就可以基于这个基点 $G$，构造密钥对、公钥加密、签名等密码学应用了。这就是现代椭圆曲线密码学的核心逻辑。
+
+## 参考
+
+- [**A (Relatively Easy To Understand) Primer on Elliptic Curve Cryptography**](https://blog.cloudflare.com/a-relatively-easy-to-understand-primer-on-elliptic-curve-cryptography)
+- [**Elliptic Curve Cryptography: a gentle introduction** – Andrea Corbellini](https://andrea.corbellini.name/2015/05/17/elliptic-curve-cryptography-a-gentle-introduction/)
+- [**SEC 2: Recommended Elliptic Curve Domain Parameters** (SECG)](https://www.secg.org/sec2-v2.pdf)
+- [**OpenSSL ECC Tutorial**](https://wiki.openssl.org/index.php/Elliptic_Curve_Cryptography)

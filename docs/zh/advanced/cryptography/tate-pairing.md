@@ -134,3 +134,7 @@ $$
 $$
 
 恭喜你，你完整地发明了 Tate 算法。但还有一个终极问题，我们该怎么高效地计算它，如果不具备可计算性，则一切都失去意义。
+
+## 参考
+
+- [“The Tate Pairing” – Stanford PBC Library](https://crypto.stanford.edu/pbc/notes/ep/tate.html)

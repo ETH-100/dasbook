@@ -202,3 +202,7 @@ $$
 成立即表明所有点值均为真实可信，且多项式的承诺与它们兼容。
 
 在实际应用中，我们使用更为高效的 [aSVC（Aggregatable Subvector Commitment）](https://alinush.github.io/2020/05/06/aggregatable-subvector-commitments-for-stateless-cryptocurrencies.html#constant-sized-i-subvector-proofs)方案，它能够实现批量证明中的单点验证，这在数据可用性采用中十分有用，极大地减少带宽和存储。
+
+## 参考
+
+- [**Dankrad Feist： KZG多项式承诺**](https://dankradfeist.de/ethereum/2021/10/13/kate-polynomial-commitments-mandarin.html)

@@ -215,3 +215,8 @@ If it holds, all point evaluations are valid and consistent with the committed p
 ---
 
 In practice, we use a more efficient scheme called [aSVC (Aggregatable Subvector Commitment)](https://alinush.github.io/2020/05/06/aggregatable-subvector-commitments-for-stateless-cryptocurrencies.html#constant-sized-i-subvector-proofs), which enables **batch proofs that support individual queries**. This is particularly useful in **data availability** settings, where it greatly reduces bandwidth and storage overhead.
+
+
+## References
+
+- [Dankrad Feist: KZG Polynomial Commitments](https://dankradfeist.de/ethereum/2020/06/16/kate-polynomial-commitments.html)

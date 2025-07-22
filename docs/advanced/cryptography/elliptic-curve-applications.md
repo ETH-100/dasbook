@@ -179,3 +179,10 @@ This leads to **ECDSA-recoverable signatures**, which add a **recovery id** (usu
 * Whether it belongs to a subgroup or its multiple
 
 With these 2 bits and $(r, s)$, the signer’s public key can be reconstructed. That’s why Ethereum signatures are represented as $(v, r, s)$, where $v$ is the recovery id (and may include chain ID), allowing **address recovery**.
+
+## References
+
+- [**Elliptic Curve Cryptography: ECDH and ECDSA**](https://andrea.corbellini.name/2015/05/30/elliptic-curve-cryptography-ecdh-and-ecdsa/)
+- [**Schnorr Digital Signature**](https://www.geeksforgeeks.org/computer-networks/schnorr-digital-signature/)
+- [**Schnorr Signatures, Commitments** – UIUC Cryptography Lecture Notes](https://courses.grainger.illinois.edu/cs498ac3/fa2020/Files/Lecture_13_Scribe.pdf)
+- [**To Schnorr and beyond (Part 2)** – Cryptography Engineering Blog](https://blog.cryptographyengineering.com/2023/11/30/to-schnorr-and-beyond-part-2)

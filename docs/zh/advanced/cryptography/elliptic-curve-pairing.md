@@ -130,3 +130,7 @@ $$
 $$
 \operatorname{div}\left( \frac{f}{g} \right) = \operatorname{div}(f)-\operatorname{div}(g)
 $$
+
+## 参考
+
+- [Vitalik Buterin：**Exploring Elliptic Curve Pairings**](https://vitalik.eth.limo/general/2017/01/14/exploring_ecp.html)
