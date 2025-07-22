@@ -107,8 +107,8 @@ export const shared = defineConfig({
     },
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/Angry-ETH/dasbook' },
-      { icon: 'twitter', link: 'https://x.com/angryeth_xyz' },
+      { icon: 'github', link: 'https://github.com/eth-100/dasbook' },
+      { icon: 'twitter', link: 'https://x.com/ETH100_wtf' },
     ],
 
     search: {

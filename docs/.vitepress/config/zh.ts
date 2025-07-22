@@ -18,13 +18,13 @@ export const zh = defineConfig({
     },
 
     editLink: {
-      pattern: 'https://github.com/Angry-ETH/dasbook/edit/main/docs/:path',
+      pattern: 'https://github.com/eth-100/dasbook/edit/main/docs/:path',
       text: '在 GitHub 上编辑此页面'
     },
 
     footer: {
       message: '基于 CC BY-SA 4.0 许可发布',
-      copyright: `版权所有 © 2025-${new Date().getFullYear()} AngryETH`
+      copyright: `版权所有 © 2025-${new Date().getFullYear()} ETH100`
     },
 
     docFooter: {

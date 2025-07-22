@@ -18,13 +18,13 @@ export const en = defineConfig({
     },
 
     editLink: {
-      pattern: 'https://github.com/Angry-ETH/dasbook/edit/main/docs/:path',
+      pattern: 'https://github.com/eth-100/dasbook/edit/main/docs/:path',
       text: 'Edit this page on GitHub'
     },
 
     footer: {
       message: 'Released under the CC BY-SA 4.0 License.',
-      copyright: 'Copyright © 2025-present AngryETH'
+      copyright: 'Copyright © 2025-present ETH100'
     }
   }
 })
