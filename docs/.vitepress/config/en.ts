@@ -33,12 +33,12 @@ function nav(): DefaultTheme.NavItem[] {
   return [
     {
       text: 'Guide',
-      link: '/guide/concept',
+      link: '/guide/getting-started',
       activeMatch: '/guide/'
     },
     {
       text: 'Advanced',
-      link: '/advanced/network/das-network-design',
+      link: '/advanced/getting-started',
       activeMatch: '/advanced/'
     },
     {
@@ -59,6 +59,7 @@ function sidebarGuide(): DefaultTheme.SidebarItem[] {
       text: 'Guide',
       collapsed: false,
       items: [
+        { text: 'Getting Started', link: 'getting-started' },
         { text: 'Concepts', link: 'concept' },
         { text: 'Encoding', link: 'encoding' },
         { text: 'Applications', link: 'application' }
@@ -73,6 +74,7 @@ function sidebarAdvanced(): DefaultTheme.SidebarItem[] {
       text: 'Advanced',
       collapsed: false,
       items: [
+        { text: 'Getting Started', link: 'getting-started' },
         {
           text: 'Network',
           items: [
