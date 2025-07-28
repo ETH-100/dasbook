@@ -8,7 +8,7 @@ After encoding, **any 50% of the encoded data** is sufficient to **reconstruct t
 
 ### Starting with a Line
 
-Suppose we have a small piece of original data split into two parts, denoted as $y_1$ and $y_2$. You can think of them as two points on a straight line, where $y_1$ corresponds to $x_1 = 1$ and $y_2$ corresponds to $x_2 = 2$. Based on the principle that *two points determine a line*, we can uniquely determine the line:
+Suppose we have a small piece of original data split into two parts, denoted as $y_1$ and $y_2$. You can think of them as two points on a straight line, where $y_1$ corresponds to $x_1 = 1$ and $y_2$ corresponds to $x_2 = 2$. Based on the principle that *Through any two distinct points, there passes exactly one straight line.*, we can uniquely formular the line:
 
 $$
 y = ax + b
@@ -34,17 +34,17 @@ In blockchain data availability, RS encoding allows us to recover an entire bloc
 
 ## Correctness of Encoding
 
-Let’s revisit the sampling process: a validator attempts to obtain data at a certain coordinate from the network. After repeated successful samples, they gain increasing confidence in the availability of the data. But here’s a critical question: **How do we ensure that the sampled data chunks are actually the original data, and not tampered with?**
+Let’s revisit the sampling process: a validator attempts to obtain data at a certain coordinate from the network. After repeated successful samples, they gain increasing confidence in the availability of the data. But here’s a critical question: **How do we ensure that the sampled data chunks are actually the original data, and not tampered?**
 
 ### Data Fingerprints
 
 To address this, we generate a unique fingerprint for each data chunk using a cryptographic hash. Then we pair these hashes, hash them again, and repeat this process until we get a single hash representing the entire dataset—this is the famous **Merkle Root**, and the tree-like structure is known as a **Merkle Tree**.
 
-By publishing the path from a leaf to the root, anyone can verify whether a data chunk has been tampered with. Thanks to the Merkle Tree structure, the data publisher only needs to disclose the Merkle root, and other nodes can use a minimal proof (Merkle proof) to verify whether any given chunk belongs to the original dataset. This technique is widely used in Bitcoin, Ethereum, and other blockchains, forming a standard for on-chain data verification.
+By publishing the path from a leaf to the root, anyone can verify whether a data chunk has been tampered. Thanks to the Merkle Tree structure, the data publisher only needs to disclose the Merkle root, and other nodes can use a minimal proof (Merkle proof) to verify whether any given chunk belongs to the original dataset. This technique is widely used in Bitcoin, Ethereum, and other blockchains, forming a standard for on-chain data verification.
 
 ### Faulty Encoding
 
-Merkle Trees ensure that data hasn’t been altered *after* publication—but they can’t verify whether the **original data itself was correct**. Let’s look at the original correct dataset:
+Merkle Tree ensures that data hasn’t been altered *after* publication—but they can’t verify whether the **original data itself was correct**. Let’s look at the original correct dataset:
 
 $$
 [y_1, y_2, y_3, y_4]

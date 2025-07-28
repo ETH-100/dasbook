@@ -12,7 +12,7 @@ To make blockchains “faster,” the intuitive solution is to process more tran
 
 ### The ZKP Model
 
-Each blockchain maintains a complete, real-time set of data, such as all account balances, known as the “state.” When a block is added, transactions within it update this state, replacing the old "fingerprint" with a new one. This fingerprint (state root) is derived from a massive dataset computed from all historical transactions. Even a small change—like updating a single balance—can dramatically change the fingerprint. Thus, by verifying whether the new state root is valid, we can confirm that the block was correctly executed.
+Each blockchain maintains a complete, real-time set of data, such as all account balances, known as the "state". When a block is added, transactions within it update this state, replacing the old "fingerprint" with a new one. This fingerprint (state root) is derived from a massive dataset computed from all historical transactions. Even a small change—like updating a single balance—can dramatically change the fingerprint. Thus, by verifying whether the new state root is valid, we can confirm that the block was correctly executed.
 
 ![image.png](/en/ZKP.png)
 
