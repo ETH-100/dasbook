@@ -53,7 +53,7 @@ This significantly reduces on-chain data burden, lowering transaction costs and 
 
 To ensure off-chain data remains secure, Validium typically introduces a **Data Availability Committee (DAC)**—a set of permissioned nodes responsible for storing and serving the data. The system assumes a majority of these DAC nodes are honest. If most nodes go offline or behave maliciously, users may be unable to retrieve their assets, resulting in system freeze.
 
-To mitigate this risk, Validium offers **one-time exit mechanisms**. A user can submit a Merkle proof on-chain to validate their account state and exit the system. However, this is only a fallback—it cannot replace the guarantee of continuous data availability.
+To mitigate this risk, Validium offers **one-time exit mechanism**. A user can submit a Merkle proof on-chain to validate their account state and exit the system. However, this is only a fallback—it cannot replace the guarantee of continuous data availability.
 
 ## Volition
 
